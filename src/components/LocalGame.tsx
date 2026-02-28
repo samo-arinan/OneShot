@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { StartScreen } from './StartScreen'
 import { GameScreen } from './GameScreen'
 import { RoundResultScreen } from './RoundResultScreen'
@@ -22,6 +22,7 @@ function createInitialState(): GameState {
     error: null,
     finalComment: null,
     mode: 'local',
+    artMode: 'classic',
     remote: null,
   }
 }
@@ -34,6 +35,9 @@ interface LocalGameProps {
 
 export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGameProps = {}) {
   const [state, setState] = useState<GameState>(createInitialState)
+  const stateRef = useRef(state)
+  stateRef.current = state
+  const judgingRef = useRef(false)
 
   const startGame = useCallback(() => {
     const params = generateParams(1, [], SCENE_REGISTRY)
@@ -47,21 +51,25 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
   }, [])
 
   const submitGuesses = useCallback(async (guessA: string, guessB: string) => {
+    if (!guessA || !guessB || judgingRef.current) return
+    judgingRef.current = true
+
+    const { currentRound, currentParams, history } = stateRef.current
     setState((prev) => ({ ...prev, isJudging: true, error: null }))
 
     try {
       const result = await judgeGuesses({
-        round: state.currentRound,
+        round: currentRound,
         nicknameA: t().player1Label,
         nicknameB: t().player2Label,
         guessA,
         guessB,
-        history: state.history,
+        history,
       })
 
       const record: RoundRecord = {
-        round: state.currentRound,
-        params: state.currentParams,
+        round: currentRound,
+        params: currentParams,
         guessA,
         guessB,
         match: result.match,
@@ -69,7 +77,6 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
       }
 
       const isGameOver = result.match === 'different' || result.match === 'opposite'
-      const fullHistory = [...state.history, record]
 
       setState((prev) => ({
         ...prev,
@@ -80,8 +87,9 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
       }))
 
       if (isGameOver) {
+        const fullHistory = [...history, record]
         judgeGuesses({
-          round: state.currentRound,
+          round: currentRound,
           nicknameA: t().player1Label,
           nicknameB: t().player2Label,
           guessA,
@@ -100,8 +108,10 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
         isJudging: false,
         error: t().judgeFailed,
       }))
+    } finally {
+      judgingRef.current = false
     }
-  }, [state.currentRound, state.currentParams, state.history])
+  }, [])
 
   const nextRound = useCallback(() => {
     setState((prev) => {
