@@ -17,6 +17,22 @@ describe('buildShareText', () => {
     expect(text).toContain('#OneShot')
   })
 
+  it('includes game URL', () => {
+    const text = buildShareText(3)
+    expect(text).toContain('https://one-shot-nine.vercel.app')
+  })
+
+  it('includes game URL for score 0', () => {
+    const text = buildShareText(0)
+    expect(text).toContain('https://one-shot-nine.vercel.app')
+  })
+
+  it('includes game URL in Japanese locale', () => {
+    setLocale('ja')
+    const text = buildShareText(3)
+    expect(text).toContain('https://one-shot-nine.vercel.app')
+  })
+
   it('works with score 0', () => {
     const text = buildShareText(0)
     expect(text).toContain('0')
