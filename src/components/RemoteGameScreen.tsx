@@ -103,13 +103,13 @@ export function RemoteGameScreen({
               </label>
               {!myGuessSubmitted ? (
                 <div className="flex gap-2">
-                  <input
-                    type="text"
+                  <textarea
+                    rows={1}
                     placeholder={t().whatDoYouSee}
                     value={guess}
-                    onChange={(e) => setGuess(e.target.value)}
+                    onChange={(e) => setGuess(e.target.value.replace(/\n/g, ''))}
                     onKeyDown={handleKeyDown}
-                    className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+                    className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors resize-none overflow-hidden leading-normal"
                     maxLength={50}
                     autoFocus
                   />

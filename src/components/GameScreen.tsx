@@ -79,32 +79,30 @@ export function GameScreen({
           <div className="space-y-3">
             <div>
               <label className="block text-sm text-gray-400 mb-1">{t().player1Label}</label>
-              <input
-                type="text"
-                autoComplete="off"
+              <textarea
+                rows={1}
                 placeholder={t().whatDoYouSee}
                 value={guessA}
-                onChange={(e) => setGuessA(e.target.value)}
+                onChange={(e) => setGuessA(e.target.value.replace(/\n/g, ''))}
                 onFocus={() => setFocusedInput('A')}
                 onBlur={() => setFocusedInput(null)}
                 style={focusedInput !== 'A' && guessA ? maskStyle : undefined}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors resize-none overflow-hidden leading-normal"
                 maxLength={50}
                 autoFocus
               />
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">{t().player2Label}</label>
-              <input
-                type="text"
-                autoComplete="off"
+              <textarea
+                rows={1}
                 placeholder={t().whatDoYouSee}
                 value={guessB}
-                onChange={(e) => setGuessB(e.target.value)}
+                onChange={(e) => setGuessB(e.target.value.replace(/\n/g, ''))}
                 onFocus={() => setFocusedInput('B')}
                 onBlur={() => setFocusedInput(null)}
                 style={focusedInput !== 'B' && guessB ? maskStyle : undefined}
-                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors resize-none overflow-hidden leading-normal"
                 maxLength={50}
               />
             </div>
