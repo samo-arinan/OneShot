@@ -14,6 +14,8 @@ export interface VisualParams {
   seed: number
   coherence: number
   sceneId: string
+  svgContent?: string
+  theme?: string
 }
 
 export interface Scene {
@@ -61,6 +63,22 @@ export interface JudgeResponse {
   comment: string
 }
 
+export type ArtMode = 'classic' | 'ai-script' | 'ai-json'
+
+export interface GenerateRoundRequest {
+  mode: 'script' | 'json'
+  coherence: number
+  previousThemes?: string[]
+  lang?: 'en' | 'ja'
+}
+
+export interface GenerateRoundResponse {
+  content: string
+  fallback: boolean
+  theme?: string
+}
+
+
 export type GameMode = 'local' | 'remote'
 export type PlayerRole = 'host' | 'guest'
 
@@ -84,5 +102,6 @@ export interface GameState {
   error: string | null
   finalComment: string | null
   mode: GameMode
+  artMode: ArtMode
   remote: RemoteGameState | null
 }
