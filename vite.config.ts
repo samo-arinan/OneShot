@@ -23,7 +23,7 @@ function localApiPlugin(): Plugin {
         for await (const chunk of req) chunks.push(chunk as Buffer)
         const body = JSON.parse(Buffer.concat(chunks).toString())
 
-        const { round, nicknameA, nicknameB, guessA, guessB, history, isFinal } = body
+        const { round, nicknameA, nicknameB, guessA, guessB, history, isFinal, lang } = body
 
         if (!guessA || !guessB) {
           res.statusCode = 400
@@ -31,13 +31,18 @@ function localApiPlugin(): Plugin {
           return
         }
 
+        const isJa = lang === 'ja'
+
         const historyText = (history ?? [])
           .map((h: { round: number; guessA: string; guessB: string; match: string }) =>
-            `Round ${h.round}: ${nicknameA}「${h.guessA}」 ${nicknameB}「${h.guessB}」→ ${h.match}`
+            isJa
+              ? `Round ${h.round}: ${nicknameA}「${h.guessA}」 ${nicknameB}「${h.guessB}」→ ${h.match}`
+              : `Round ${h.round}: ${nicknameA} "${h.guessA}" ${nicknameB} "${h.guessB}" → ${h.match}`
           )
           .join('\n')
 
-        const systemPrompt = `あなたは2人の相性ゲーム「One Shot」のジャッジです。
+        const systemPrompt = isJa
+          ? `あなたは2人の相性ゲーム「One Shot」のジャッジです。
 
 ## タスク
 2人に同じ抽象画を見せて「何に見える？」と聞きました。
@@ -66,12 +71,47 @@ ${isFinal ? '- これがゲーム終了のラウンドです。全体を振り�
 ## 出力ルール
 - JSONだけを出力（\`\`\`で囲まない、説明テキストなし）
 - { "match": "...", "comment": "..." } の形式`
+          : `You are the judge of a 2-player perception game called "One Shot".
 
-        const userPrompt = `Round ${round}
+## Task
+Two players were shown the same abstract artwork and asked "What do you see?"
+Compare their answers and judge the similarity level.
+
+## Judging Criteria
+- "perfect": Essentially the same thing (different wording, same meaning)
+  Example: "ocean sunset" and "sunset beach"
+  Example: "cat" and "kitty"
+- "close": Similar imagery (clearly related)
+  Example: "summer" and "beach"
+  Example: "sunset" and "autumn sky"
+- "different": Completely different things
+  Example: "ocean" and "library"
+- "opposite": Opposite impressions (amusing contrast)
+  Example: "quiet night" and "festival"
+
+## Comment Rules
+- Casual and humorous English
+- 1-2 sentences, keep it short
+- perfect/close: impressed/amazed tone ("Wow!" "Telepathy?")
+- different/opposite: keep it positive ("That's interesting!" "Total opposites, love it!")
+- If there's round history, you may reference the streak
+${isFinal ? '- This is the final round. Write a 2-3 sentence summary of the entire game. Include one conversation-starter question.' : ''}
+
+## Output Rules
+- Output JSON only (no markdown fences, no explanation text)
+- Format: { "match": "...", "comment": "..." }`
+
+        const userPrompt = isJa
+          ? `Round ${round}
 
 Player 1「${nicknameA}」の回答: ${guessA}
 Player 2「${nicknameB}」の回答: ${guessB}
 ${historyText ? `\nこれまでの履歴:\n${historyText}` : ''}`
+          : `Round ${round}
+
+Player 1 "${nicknameA}" answered: ${guessA}
+Player 2 "${nicknameB}" answered: ${guessB}
+${historyText ? `\nHistory:\n${historyText}` : ''}`
 
         try {
           const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
@@ -111,7 +151,7 @@ ${historyText ? `\nこれまでの履歴:\n${historyText}` : ''}`
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({
             match: 'different',
-            comment: 'AIが混乱しちゃった...',
+            comment: isJa ? 'AIが混乱しちゃった...' : 'The AI got confused...',
           }))
         }
       })
