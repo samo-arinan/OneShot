@@ -7,6 +7,7 @@ interface RoundResultScreenProps {
   record: RoundRecord
   isGameOver: boolean
   onNext: () => void
+  isWaiting?: boolean
 }
 
 const colorMap: Record<MatchLevel, string> = {
@@ -34,6 +35,7 @@ export function RoundResultScreen({
   record,
   isGameOver,
   onNext,
+  isWaiting = false,
 }: RoundResultScreenProps) {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col items-center justify-center p-6">
@@ -65,12 +67,18 @@ export function RoundResultScreen({
         {record.comment}
       </p>
 
-      <button
-        onClick={onNext}
-        className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-lg font-medium transition-colors cursor-pointer"
-      >
-        {isGameOver ? t().viewResults : t().nextRound}
-      </button>
+      {isWaiting ? (
+        <div className="text-gray-500 text-sm animate-pulse">
+          {t().waitingForOpponent}
+        </div>
+      ) : (
+        <button
+          onClick={onNext}
+          className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-lg font-medium transition-colors cursor-pointer"
+        >
+          {isGameOver ? t().viewResults : t().nextRound}
+        </button>
+      )}
     </div>
   )
 }
