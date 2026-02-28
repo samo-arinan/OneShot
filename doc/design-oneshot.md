@@ -855,6 +855,8 @@ Server → Client: `room_state`, `player_joined`, `round_start`, `guess_received
 - Room state persisted in PartyKit storage (Durable Objects)
 - On reconnect, server sends full `room_state`
 - `hibernate: true` for cost efficiency
+- **Mobile reconnection**: `visibilitychange` listener forces `socket.reconnect()` when page returns to foreground — mobile browsers throttle/kill background WebSocket reconnection attempts
+- **Manual retry**: Reconnecting screen includes a "Retry" button for cases where automatic reconnection stalls
 
 ### Key Files
 
@@ -880,7 +882,8 @@ Nickname input added UX friction without real value. Removed entirely in favor o
 - Judge API still receives `nicknameA`/`nicknameB` (hardcoded to player labels) for prompt formatting
 
 #### Local Mode — Two Simultaneous Inputs
-- Replaced the 4-phase state machine (`viewing` → `playerA` → `playerB` → `confirm`) with two always-visible `<input type="text">` fields
+- Replaced the 4-phase state machine (`viewing` → `playerA` → `playerB` → `confirm`) with two always-visible `<textarea rows={1}>` fields
+- **`<textarea>` instead of `<input>`**: Android Chrome ignores `autoComplete="off"` on `<input>`, showing password/credit card/address suggestion bar above the IME keyboard. `<textarea>` does not trigger browser autofill UI. Newlines stripped in `onChange`.
 - **Focus-based masking**: CSS `-webkit-text-security: disc` hides text when input is blurred; visible while focused. Prevents opponent from reading the other's answer while allowing the typist to see their own input
 - Submit button ("One Shot!") enabled when both inputs are non-empty
 - When judging: both answers revealed + "Judging..." indicator
@@ -893,7 +896,7 @@ Nickname input added UX friction without real value. Removed entirely in favor o
 
 #### Remote Mode — Two-Box with Opponent Status
 - `RemoteGameScreen` uses `myRole: 'host' | 'guest'` prop instead of nickname props
-- Own box: `<input type="text">` + OK button with "(You)" suffix
+- Own box: `<textarea rows={1}>` + OK button with "(You)" suffix
 - Opponent box: shows "Waiting..." or "Submitted" status indicator
 - **IME guard**: `e.nativeEvent.isComposing` check on Enter keydown prevents Japanese IME composition-confirm from triggering form submission
 - When judging: both answers revealed (from `revealedGuessA`/`revealedGuessB` state)

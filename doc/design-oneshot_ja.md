@@ -848,6 +848,8 @@ Server → Client: `room_state`, `player_joined`, `round_start`, `guess_received
 - ルーム状態はPartyKit storage（Durable Objects）に永続化
 - 再接続時、サーバーが完全な `room_state` を送信
 - `hibernate: true` でコスト効率化
+- **モバイル再接続**: `visibilitychange` リスナーでページがフォアグラウンドに復帰した際に `socket.reconnect()` を強制実行 — モバイルブラウザはバックグラウンドでのWebSocket再接続を制限/停止するため
+- **手動リトライ**: 再接続画面に「Retry」ボタンを配置。自動再接続が停滞した場合に手動で再試行可能
 
 ### 主要ファイル
 
@@ -873,7 +875,8 @@ Server → Client: `room_state`, `player_joined`, `round_start`, `guess_received
 - Judge APIは引き続き `nicknameA`/`nicknameB` を受け取る（プレイヤーラベルをハードコード）
 
 #### ローカルモード — 2入力同時表示
-- 4フェーズ状態遷移（`viewing` → `playerA` → `playerB` → `confirm`）を廃止し、2つの `<input type="text">` を常時表示
+- 4フェーズ状態遷移（`viewing` → `playerA` → `playerB` → `confirm`）を廃止し、2つの `<textarea rows={1}>` を常時表示
+- **`<textarea>` を `<input>` の代わりに使用**: Android Chromeは `<input>` の `autoComplete="off"` を無視し、IMEキーボード上にパスワード・クレカ・住所の候補バーを表示する。`<textarea>` はブラウザの自動補完UIを表示しない。改行は `onChange` で除去。
 - **フォーカスベースマスキング**: CSS `-webkit-text-security: disc` でフォーカスが外れた入力をドット表示。フォーカス中はテキストが見える。相手の回答を隠しつつ、自分の入力は確認できる
 - 送信ボタン（"One Shot!"）は両方の入力が非空の場合のみ有効
 - 判定中: 両者の回答を表示 + 「判定中...」インジケーター
@@ -886,7 +889,7 @@ Server → Client: `room_state`, `player_joined`, `round_start`, `guess_received
 
 #### リモートモード — 2ボックス + 相手ステータス
 - `RemoteGameScreen` はニックネームpropsの代わりに `myRole: 'host' | 'guest'` propを使用
-- 自分のボックス: `<input type="text">` + OKボタン、「(あなた)」サフィックス付き
+- 自分のボックス: `<textarea rows={1}>` + OKボタン、「(あなた)」サフィックス付き
 - 相手のボックス: 「回答待ち...」または「回答済み」ステータス表示
 - **IMEガード**: Enter keydownで `e.nativeEvent.isComposing` をチェック。日本語IMEの変換確定Enterでフォーム送信されるのを防止
 - 判定中: 両者の回答を表示（`revealedGuessA`/`revealedGuessB` stateから）

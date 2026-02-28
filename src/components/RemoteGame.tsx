@@ -244,7 +244,7 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     }
   }, [role, callJudge])
 
-  const { send, connected } = useRoom({
+  const { send, connected, reconnect } = useRoom({
     roomCode,
     role,
     onMessage: handleMessage,
@@ -392,7 +392,15 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
   if (!connected) {
     return (
       <div className="min-h-screen bg-gray-950 text-gray-100 flex items-center justify-center">
-        <div className="text-gray-400 animate-pulse">{t().reconnecting}</div>
+        <div className="text-center">
+          <div className="text-gray-400 animate-pulse mb-6">{t().reconnecting}</div>
+          <button
+            onClick={reconnect}
+            className="text-gray-500 hover:text-gray-300 text-sm cursor-pointer border border-gray-700 rounded px-4 py-2"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     )
   }

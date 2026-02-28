@@ -2,7 +2,9 @@ import PartySocket from 'partysocket'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { ClientMessage, ServerMessage } from '../../party/protocol'
 
-const PARTYKIT_HOST = import.meta.env.VITE_PARTYKIT_HOST ?? 'localhost:1999'
+const PARTYKIT_HOST = import.meta.env.DEV
+  ? 'localhost:1999'
+  : 'oneshot.samo-arinan.partykit.dev'
 
 export interface UseRoomOptions {
   roomCode: string
@@ -14,6 +16,7 @@ export interface UseRoomReturn {
   send: (msg: ClientMessage) => void
   connected: boolean
   disconnect: () => void
+  reconnect: () => void
 }
 
 export function useRoom({ roomCode, role, onMessage }: UseRoomOptions): UseRoomReturn {
@@ -47,9 +50,18 @@ export function useRoom({ roomCode, role, onMessage }: UseRoomOptions): UseRoomR
 
     socket.addEventListener('close', () => setConnected(false))
 
+    // Force reconnect when returning from background (mobile sleep/tab switch)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && socket.readyState !== WebSocket.OPEN) {
+        socket.reconnect()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
     socketRef.current = socket
 
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
       socket.close()
       socketRef.current = null
     }
@@ -64,7 +76,11 @@ export function useRoom({ roomCode, role, onMessage }: UseRoomOptions): UseRoomR
     socketRef.current = null
   }, [])
 
-  return { send, connected, disconnect }
+  const reconnect = useCallback(() => {
+    socketRef.current?.reconnect()
+  }, [])
+
+  return { send, connected, disconnect, reconnect }
 }
 
 export { PARTYKIT_HOST }
