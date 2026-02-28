@@ -61,6 +61,19 @@ export interface JudgeResponse {
   comment: string
 }
 
+export type GameMode = 'local' | 'remote'
+export type PlayerRole = 'host' | 'guest'
+
+export interface RemoteGameState {
+  roomCode: string
+  role: PlayerRole
+  connected: boolean
+  opponentConnected: boolean
+  opponentNickname: string
+  myGuessSubmitted: boolean
+  opponentGuessSubmitted: boolean
+}
+
 export interface GameState {
   phase: GamePhase
   nicknameA: string
@@ -73,4 +86,6 @@ export interface GameState {
   isJudging: boolean
   error: string | null
   finalComment: string | null
+  mode: GameMode
+  remote: RemoteGameState | null
 }

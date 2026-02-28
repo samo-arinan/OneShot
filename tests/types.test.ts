@@ -10,6 +10,9 @@ import type {
   JudgeRequest,
   JudgeResponse,
   GameState,
+  GameMode,
+  PlayerRole,
+  RemoteGameState,
 } from '../src/types'
 
 describe('types', () => {
@@ -81,8 +84,40 @@ describe('types', () => {
       isJudging: false,
       error: null,
       finalComment: null,
+      mode: 'local',
+      remote: null,
     }
     expect(Array.isArray(state.previousSceneIds)).toBe(true)
+  })
+
+  it('GameMode covers local and remote', () => {
+    const modes: Record<GameMode, true> = {
+      local: true,
+      remote: true,
+    }
+    expect(Object.keys(modes)).toHaveLength(2)
+  })
+
+  it('PlayerRole covers host and guest', () => {
+    const roles: Record<PlayerRole, true> = {
+      host: true,
+      guest: true,
+    }
+    expect(Object.keys(roles)).toHaveLength(2)
+  })
+
+  it('RemoteGameState has correct shape', () => {
+    const remote: RemoteGameState = {
+      roomCode: 'ABC123',
+      role: 'host',
+      connected: true,
+      opponentConnected: false,
+      opponentNickname: '',
+      myGuessSubmitted: false,
+      opponentGuessSubmitted: false,
+    }
+    expect(remote.roomCode).toBe('ABC123')
+    expect(remote.role).toBe('host')
   })
 
   it('Scene has id, name, category, render', () => {

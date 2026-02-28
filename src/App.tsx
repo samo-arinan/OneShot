@@ -23,6 +23,8 @@ function createInitialState(): GameState {
     isJudging: false,
     error: null,
     finalComment: null,
+    mode: 'local',
+    remote: null,
   }
 }
 
