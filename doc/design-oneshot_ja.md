@@ -75,8 +75,8 @@
 ## 確定事項
 
 ### 体験設計
-- **プロフィール質問は無し** — ゲーム開始が超軽い
-- 入力はニックネーム2人分のみ
+- **プロフィール質問もニックネームも無し** — ゲーム開始はボタン1タップ
+- 固定ラベル「プレイヤー1」「プレイヤー2」（i18nで管理）
 - 毎ラウンド: 抽象画表示 → 2人が自由テキスト入力 → LLMが一致判定
 - 一致 → 次のラウンド、不一致 → ゲーム終了
 - **連続一致回数**がスコア（数値スコア0-100は出さない）
@@ -108,8 +108,8 @@ Round 5+: coherence 0.1 — ほぼカオス（一致したら奇跡）
   - different / opposite → ゲーム終了
 
 ### 2つのモード
-- **ローカルモード**: 1画面で2人が操作。相手の回答は見える（相談OK、ゆるい）
-- **リモートモード**: URL共有で別端末プレイ（Phase 3で実装）
+- **ローカルモード**: 1画面で2人が操作。2つのマスク付き入力欄を同時表示（フォーカスで表示、ブラーでマスク）
+- **リモートモード**: URL共有で別端末プレイ。自分の入力 + 相手の送信状態を表示
 
 ### 技術構成
 - React SPA（Vite + TypeScript + Tailwind CSS）
@@ -804,6 +804,99 @@ Server → Client: `room_state`, `player_joined`, `round_start`, `guess_received
 - `src/lib/room.ts` — `useRoom`フック（PartySocketラッパー）
 - `src/components/RemoteGame.tsx` — リモートモードオーケストレーター
 - `src/components/RemoteGameScreen.tsx` — プレイヤー別入力画面
+
+---
+
+## v9: ニックネーム廃止 + 入力UI刷新
+
+### 動機
+
+ニックネーム入力はUX上の摩擦を増やすだけで実質的な価値がなかった。固定ラベル「プレイヤー1」「プレイヤー2」に置き換え。
+
+### 設計からの変更点
+
+#### 体験設計
+- **ニックネーム入力なし** — ゲーム開始はボタン1タップのみ
+- 固定ラベル: `t().player1Label` / `t().player2Label`（en: "Player 1"/"Player 2", ja: "プレイヤー1"/"プレイヤー2"）
+- Judge APIは引き続き `nicknameA`/`nicknameB` を受け取る（プレイヤーラベルをハードコード）
+
+#### ローカルモード — 2入力同時表示
+- 4フェーズ状態遷移（`viewing` → `playerA` → `playerB` → `confirm`）を廃止し、2つの `<input type="text">` を常時表示
+- **フォーカスベースマスキング**: CSS `-webkit-text-security: disc` でフォーカスが外れた入力をドット表示。フォーカス中はテキストが見える。相手の回答を隠しつつ、自分の入力は確認できる
+- 送信ボタン（"One Shot!"）は両方の入力が非空の場合のみ有効
+- 判定中: 両者の回答を表示 + 「判定中...」インジケーター
+- **二重送信ガード**: `useRef<boolean>` で `submitGuesses` の並行呼び出しを防止。`useCallback` のクロージャ依存ではなく `stateRef` パターン（毎レンダーでrefを更新）で最新stateを読み取り
+
+#### React StrictMode対応
+- **原因**: React StrictModeは `setState` のupdater関数を2回呼び出す（不純なreducerの検出用）。updater内の副作用（API呼び出し、WebSocket送信）が2回実行され、サーバーへのメッセージが重複
+- **影響箇所**: `LocalGame` と `RemoteGame` の `callJudge`（judgeGuesses API + judge_result送信）と `handleNextRound`（start_round送信）が `setState` updater内で副作用を実行していた
+- **修正**: `stateRef` パターン — 毎レンダーで更新される `useRef` でクロージャなしに最新stateを取得。副作用（send、API呼び出し）を `setState` 外に移動。`judgingRef` booleanガードで判定の並行実行を防止
+
+#### リモートモード — 2ボックス + 相手ステータス
+- `RemoteGameScreen` はニックネームpropsの代わりに `myRole: 'host' | 'guest'` propを使用
+- 自分のボックス: `<input type="text">` + OKボタン、「(あなた)」サフィックス付き
+- 相手のボックス: 「回答待ち...」または「回答済み」ステータス表示
+- **IMEガード**: Enter keydownで `e.nativeEvent.isComposing` をチェック。日本語IMEの変換確定Enterでフォーム送信されるのを防止
+- 判定中: 両者の回答を表示（`revealedGuessA`/`revealedGuessB` stateから）
+
+#### プロトコル変更
+- `ClientMessage` join: `nickname` フィールド削除 → `{ type: 'join', role }`
+- `ServerMessage` player_joined: `nickname` フィールド削除 → `{ type: 'player_joined', role }`
+- `RoomSyncState`: `nicknameA: string` / `nicknameB: string` → `hasHost: boolean` / `hasGuest: boolean` に置き換え
+- `handleJoin` が `player_joined` と `room_state` の両方をブロードキャスト — 参加者自身の `player_joined` が相手の参加と誤認され、共有リンクのあるWaitingScreenがスキップされるバグの修正。`room_state` が正式な状態ソース、`player_joined` は情報通知のみ
+
+#### i18n変更
+- 削除: `nickname`, `enterNickname`, `answerFrom(name)`, `dontLook(name)`, `nameWhatDoYouSee(name)`, `checkAnswers`, `opponentJoined(name)`（関数）, `waitingForAnswer(name)`（関数）
+- 追加: `youSuffix`（"(You)"/"(あなた)"）, `submitted`（"Submitted"/"回答済み"）, `waitingForOpponentAnswer`（静的文字列）
+- 変更: `opponentJoined` を補間関数から静的文字列に
+
+#### 更新後の画面レイアウト
+
+```
+【スタート画面 — ローカル】
+┌──────────────────────────┐
+│                           │
+│        ONE SHOT           │
+│   同じものが、見えるか。    │
+│                           │
+│        [One Shot!]        │
+│                           │
+│         — or —            │
+│      [ルームを作成]        │
+└──────────────────────────┘
+
+【ゲーム画面 — ローカル】
+┌──────────────────────────┐
+│  Round 1            xx    │
+│                           │
+│  ┌────────────────────┐  │
+│  │   [抽象画 SVG]      │  │
+│  └────────────────────┘  │
+│                           │
+│  プレイヤー1               │
+│  [●●●●●●●●]  ← マスク    │
+│                           │
+│  プレイヤー2               │
+│  [入力中...]  ← 見える     │
+│                           │
+│      [One Shot!]          │
+└──────────────────────────┘
+
+【ゲーム画面 — リモート】
+┌──────────────────────────┐
+│  Round 1            xx    │
+│                           │
+│  ┌────────────────────┐  │
+│  │   [抽象画 SVG]      │  │
+│  └────────────────────┘  │
+│                           │
+│  プレイヤー1 (あなた)      │
+│  [夕焼け       ] [OK]     │
+│                           │
+│  プレイヤー2               │
+│  [ 回答待ち...         ]   │
+└──────────────────────────┘
+```
 
 ---
 

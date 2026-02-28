@@ -22,7 +22,6 @@ function createInitialState(): GameState {
     error: null,
     finalComment: null,
     mode: 'local',
-    artMode: 'classic',
     remote: null,
   }
 }

@@ -75,8 +75,8 @@ How long can they keep matching?
 ## Decisions
 
 ### Experience Design
-- **No profile questions** — game start is ultra-lightweight
-- Only input: nicknames for 2 players
+- **No profile questions, no nicknames** — game start is a single button tap
+- Fixed "Player 1" / "Player 2" labels (from i18n)
 - Each round: display abstract art → both players enter free text → LLM judges match
 - Match → next round, no match → game over
 - **Consecutive match count** is the score (no numeric 0-100 score)
@@ -108,8 +108,8 @@ Round 5+: coherence 0.1 — near chaos (matching would be a miracle)
   - different / opposite → game over
 
 ### Two Modes
-- **Local mode**: 2 players on 1 screen. Each other's answers are visible (casual, discussion OK)
-- **Remote mode**: Share URL for separate device play (Phase 3 implementation)
+- **Local mode**: 2 players on 1 screen. Two masked input fields side by side (focus to reveal, blur to mask)
+- **Remote mode**: Share URL for separate device play. Each player sees own input + opponent submission status
 
 ### Tech Stack
 - React SPA (Vite + TypeScript + Tailwind CSS)
@@ -777,13 +777,13 @@ Server → Client: `room_state`, `player_joined`, `round_start`, `guess_received
 ### Flow
 
 ```
-1. Player 1 (Host) enters nickname, clicks "Create Room"
+1. Player 1 (Host) clicks "Create Room"
 2. Room code generated (e.g. XK7M2N), displayed with shareable URL
 3. Host waits for guest to join
 
 --- Player 2 opens /room/XK7M2N ---
 
-4. Player 2 (Guest) enters nickname, clicks "Join Room"
+4. Player 2 (Guest) clicks "Join Room"
 5. Both see RoomLobby with green connection indicators
 6. Host clicks "Start Game"
 
@@ -811,6 +811,100 @@ Server → Client: `room_state`, `player_joined`, `round_start`, `guess_received
 - `src/lib/room.ts` — `useRoom` hook (PartySocket wrapper)
 - `src/components/RemoteGame.tsx` — Remote mode orchestrator
 - `src/components/RemoteGameScreen.tsx` — Per-player input screen
+
+---
+
+## v9: Nickname Removal + Input Redesign
+
+### Motivation
+
+Nickname input added UX friction without real value. Removed entirely in favor of fixed "Player 1" / "Player 2" labels from i18n.
+
+### Changes from Original Design
+
+#### Experience Design
+- **No nickname input** — game start is now a single button tap
+- Fixed labels: `t().player1Label` / `t().player2Label` (en: "Player 1"/"Player 2", ja: "プレイヤー1"/"プレイヤー2")
+- Judge API still receives `nicknameA`/`nicknameB` (hardcoded to player labels) for prompt formatting
+
+#### Local Mode — Two Simultaneous Inputs
+- Replaced the 4-phase state machine (`viewing` → `playerA` → `playerB` → `confirm`) with two always-visible `<input type="text">` fields
+- **Focus-based masking**: CSS `-webkit-text-security: disc` hides text when input is blurred; visible while focused. Prevents opponent from reading the other's answer while allowing the typist to see their own input
+- Submit button ("One Shot!") enabled when both inputs are non-empty
+- When judging: both answers revealed + "Judging..." indicator
+- **Double-submission guard**: `useRef<boolean>` prevents concurrent `submitGuesses` calls. Latest state read via `stateRef` pattern (ref updated every render) instead of `useCallback` closure deps
+
+#### React StrictMode Compatibility
+- **Root cause**: React StrictMode calls `setState` updater functions twice (to detect impure reducers). Any side effects (API calls, WebSocket sends) inside updaters execute twice, causing duplicate server messages
+- **Affected patterns**: `callJudge` (judgeGuesses API + judge_result send) and `handleNextRound` (start_round send) in both `LocalGame` and `RemoteGame` had side effects inside `setState` updaters
+- **Fix**: `stateRef` pattern — a `useRef` updated every render provides latest state without closures. Side effects (send, API calls) moved outside `setState`. `judgingRef` boolean guard prevents concurrent judge invocations
+
+#### Remote Mode — Two-Box with Opponent Status
+- `RemoteGameScreen` uses `myRole: 'host' | 'guest'` prop instead of nickname props
+- Own box: `<input type="text">` + OK button with "(You)" suffix
+- Opponent box: shows "Waiting..." or "Submitted" status indicator
+- **IME guard**: `e.nativeEvent.isComposing` check on Enter keydown prevents Japanese IME composition-confirm from triggering form submission
+- When judging: both answers revealed (from `revealedGuessA`/`revealedGuessB` state)
+
+#### Protocol Changes
+- `ClientMessage` join: removed `nickname` field → `{ type: 'join', role }`
+- `ServerMessage` player_joined: removed `nickname` field → `{ type: 'player_joined', role }`
+- `RoomSyncState`: replaced `nicknameA: string` / `nicknameB: string` with `hasHost: boolean` / `hasGuest: boolean`
+- `handleJoin` now broadcasts both `player_joined` AND `room_state` — the joining player's own `player_joined` was being misinterpreted as an opponent joining, causing WaitingScreen (with share link) to be skipped. `room_state` provides authoritative truth; `player_joined` is informational only
+
+#### i18n Changes
+- Removed: `nickname`, `enterNickname`, `answerFrom(name)`, `dontLook(name)`, `nameWhatDoYouSee(name)`, `checkAnswers`, `opponentJoined(name)` (function), `waitingForAnswer(name)` (function)
+- Added: `youSuffix` ("(You)"/"(あなた)"), `submitted` ("Submitted"/"回答済み"), `waitingForOpponentAnswer` (static string)
+- Changed: `opponentJoined` from interpolation function to static string
+
+#### Updated Screen Layouts
+
+```
+[Start Screen — Local]
+┌──────────────────────────┐
+│                           │
+│        ONE SHOT           │
+│    Can you see the same   │
+│        thing?             │
+│                           │
+│        [One Shot!]        │
+│                           │
+│         — or —            │
+│      [Create Room]        │
+└──────────────────────────┘
+
+[Game Screen — Local]
+┌──────────────────────────┐
+│  Round 1            xx    │
+│                           │
+│  ┌────────────────────┐  │
+│  │   [Abstract SVG]    │  │
+│  └────────────────────┘  │
+│                           │
+│  Player 1                 │
+│  [●●●●●●●●]  ← masked    │
+│                           │
+│  Player 2                 │
+│  [typing...]  ← visible   │
+│                           │
+│      [One Shot!]          │
+└──────────────────────────┘
+
+[Game Screen — Remote]
+┌──────────────────────────┐
+│  Round 1            xx    │
+│                           │
+│  ┌────────────────────┐  │
+│  │   [Abstract SVG]    │  │
+│  └────────────────────┘  │
+│                           │
+│  Player 1 (You)           │
+│  [sunset       ] [OK]     │
+│                           │
+│  Player 2                 │
+│  [ Waiting...         ]   │
+└──────────────────────────┘
+```
 
 ---
 
