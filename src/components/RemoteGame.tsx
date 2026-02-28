@@ -150,13 +150,7 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
       }
 
       case 'player_joined':
-        setState((prev) => {
-          const next = { ...prev, hasOpponent: true }
-          if (next.phase === 'waiting') {
-            next.phase = 'lobby'
-          }
-          return next
-        })
+        // State transition handled by room_state broadcast that follows
         break
 
       case 'round_start':

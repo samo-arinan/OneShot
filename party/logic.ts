@@ -38,7 +38,10 @@ export function handleJoin(
   }
   return {
     state: next,
-    messages: [{ type: 'player_joined', role }],
+    messages: [
+      { type: 'player_joined', role },
+      { type: 'room_state', state: next },
+    ],
   }
 }
 

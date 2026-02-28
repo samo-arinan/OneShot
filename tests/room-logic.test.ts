@@ -40,13 +40,17 @@ describe('handleJoin', () => {
     expect(result.state.hasHost).toBe(false)
   })
 
-  it('broadcasts player_joined message', () => {
+  it('broadcasts player_joined and room_state', () => {
     const state = createEmptyState()
     const result = handleJoin(state, 'host')
-    expect(result.messages).toHaveLength(1)
+    expect(result.messages).toHaveLength(2)
     expect(result.messages[0]).toEqual({
       type: 'player_joined',
       role: 'host',
+    })
+    expect(result.messages[1]).toEqual({
+      type: 'room_state',
+      state: result.state,
     })
   })
 
