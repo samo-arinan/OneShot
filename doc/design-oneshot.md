@@ -43,6 +43,13 @@ How long can they keep matching?
   - Removed AI Scene (JSON) mode — no longer imports `json-svg-renderer`
   - Round 1 image pre-generated on start screen mount (background prefetch begins before user clicks "One Shot!")
   - On restart, round 1 prefetch restarts immediately
+- **v11: Online play UX improvements**
+  - **Deferred art loading**: `start_round` sent immediately with fallback params, game screen shows loading indicator, AI art delivered later via new `update_round_art` / `round_art_updated` protocol messages
+  - If AI generation fails, host renders classic scene SVG and sends it via `update_round_art` as fallback
+  - `startingRef` guard prevents duplicate start button clicks
+  - **Guest waiting state**: Guest sees "Waiting for opponent..." on RoundResultScreen instead of non-functional "Next Round" button
+  - **Game Over cleanup**: Removed "Player 1 & Player 2" subtitle, reduced history thumbnail size (48→32px)
+  - **AbstractArt sizing fix**: Container div enforces `width`/`height` with `overflow: hidden`, CSS rule `.art-container svg { width: 100%; height: 100% }` scales AI-generated SVGs to fit
 
 ---
 
@@ -823,8 +830,8 @@ interface RoundRecord {
 
 ### Protocol
 
-Client → Server: `join`, `start_round`, `submit_guess`, `judge_result`, `play_again`
-Server → Client: `room_state`, `player_joined`, `round_start`, `guess_received`, `both_guessed`, `round_result`, `game_over`, `opponent_disconnected/reconnected`
+Client → Server: `join`, `start_round`, `update_round_art`, `submit_guess`, `judge_result`, `play_again`
+Server → Client: `room_state`, `player_joined`, `round_start`, `round_art_updated`, `guess_received`, `both_guessed`, `round_result`, `game_over`, `opponent_disconnected/reconnected`
 
 ### Flow
 
@@ -838,15 +845,20 @@ Server → Client: `room_state`, `player_joined`, `round_start`, `guess_received
 4. Player 2 (Guest) clicks "Join Room"
 5. Both see RoomLobby with green connection indicators
 6. Host clicks "Start Game"
+   → `start_round` sent immediately with fallback params (no svgContent)
+   → Both players enter game screen with loading indicator
+   → Host generates AI art in background
+   → On success: `update_round_art` delivers svgContent to both players
+   → On failure: host renders classic scene SVG and sends via `update_round_art`
 
 --- During game ---
 
-7. Both see same abstract art (same VisualParams via PartyKit)
+7. Both see same abstract art (svgContent delivered via PartyKit)
 8. Each enters own guess independently on their device
 9. Server collects both guesses, notifies host
 10. Host calls /api/judge, sends result through PartyKit
-11. Both see RoundResultScreen
-12. Host advances to next round (or game over)
+11. Both see RoundResultScreen (guest sees "Waiting..." instead of Next button)
+12. Host advances to next round (same deferred art loading as step 6)
 ```
 
 ### Disconnection Handling

@@ -43,6 +43,13 @@
   - AI Scene（JSON）モードを削除 — `json-svg-renderer`のインポートも除去
   - スタート画面マウント時にラウンド1の画像を事前生成（ユーザーが"One Shot!"を押す前にバックグラウンドで先読み開始）
   - リスタート時にもラウンド1の先読みを即座に再開
+- **v11: オンラインプレイのUX改善**
+  - **遅延アート読み込み**: `start_round` をフォールバックパラメータで即送信、ゲーム画面でローディング表示、AI画像は新プロトコル `update_round_art` / `round_art_updated` で後から配信
+  - AI生成失敗時はホストがクラシックシーンSVGをレンダリングし `update_round_art` でフォールバック送信
+  - `startingRef` ガードでスタートボタンの二重クリックを防止
+  - **ゲスト待機状態**: ラウンド結果画面でゲストには機能しない「次のラウンドへ」ボタンの代わりに「対戦相手を待っています...」メッセージを表示
+  - **Game Over画面整理**: 「プレイヤー1 & プレイヤー2」サブタイトルを削除、履歴サムネイルサイズを縮小（48→32px）
+  - **AbstractArtサイズ制約修正**: コンテナdivに `width`/`height` + `overflow: hidden` を適用、CSS `.art-container svg { width: 100%; height: 100% }` でAI生成SVGをコンテナにフィット
 
 ---
 
@@ -816,8 +823,8 @@ interface RoundRecord {
 
 ### プロトコル
 
-Client → Server: `join`, `start_round`, `submit_guess`, `judge_result`, `play_again`
-Server → Client: `room_state`, `player_joined`, `round_start`, `guess_received`, `both_guessed`, `round_result`, `game_over`, `opponent_disconnected/reconnected`
+Client → Server: `join`, `start_round`, `update_round_art`, `submit_guess`, `judge_result`, `play_again`
+Server → Client: `room_state`, `player_joined`, `round_start`, `round_art_updated`, `guess_received`, `both_guessed`, `round_result`, `game_over`, `opponent_disconnected/reconnected`
 
 ### フロー
 
@@ -831,15 +838,20 @@ Server → Client: `room_state`, `player_joined`, `round_start`, `guess_received
 4. Player 2（ゲスト）がニックネーム入力、「ルームに参加」クリック
 5. 両者にRoomLobby表示（接続状態の緑インジケーター）
 6. ホストが「ゲーム開始」クリック
+   → `start_round` をフォールバックパラメータ（svgContentなし）で即送信
+   → 両プレイヤーがゲーム画面に遷移、ローディング表示
+   → ホストがバックグラウンドでAI画像を生成
+   → 成功時: `update_round_art` でsvgContentを両者に配信
+   → 失敗時: ホストがクラシックシーンSVGをレンダリングし `update_round_art` で送信
 
 --- ゲーム中 ---
 
-7. 両者が同じ抽象アートを閲覧（PartyKit経由で同じVisualParams）
+7. 両者が同じ抽象アートを閲覧（PartyKit経由でsvgContent配信）
 8. 各自が自分のデバイスで回答を入力
 9. サーバーが両方の回答を収集、ホストに通知
 10. ホストが /api/judge を呼び、結果をPartyKit経由で配信
-11. 両者にRoundResultScreen表示
-12. ホストが次ラウンドに進む（またはゲームオーバー）
+11. 両者にRoundResultScreen表示（ゲストは「次のラウンドへ」ボタンの代わりに待機メッセージ）
+12. ホストが次ラウンドに進む（ステップ6と同じ遅延アート読み込み）
 ```
 
 ### 切断処理
