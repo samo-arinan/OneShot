@@ -52,6 +52,7 @@ export interface JudgeRequest {
   guessA: string
   guessB: string
   history: RoundRecord[]
+  lang?: 'en' | 'ja'
 }
 
 export interface JudgeResponse {

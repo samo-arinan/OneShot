@@ -1,8 +1,10 @@
+import { t } from './i18n'
+
 export function buildShareText(score: number): string {
   if (score === 0) {
-    return `One Shotで0ラウンド...次こそは！ #OneShot`
+    return t().shareZero
   }
-  return `One Shotで${score}ラウンド連続一致した！ #OneShot`
+  return t().shareScore(score)
 }
 
 export function buildTwitterUrl(text: string): string {
