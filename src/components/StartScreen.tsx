@@ -26,7 +26,7 @@ export function StartScreen({ onStart }: StartScreenProps) {
       </p>
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Player 1</label>
+          <label className="block text-sm text-gray-400 mb-1">{t().player1Label}</label>
           <input
             type="text"
             placeholder={t().nickname}
@@ -38,7 +38,7 @@ export function StartScreen({ onStart }: StartScreenProps) {
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Player 2</label>
+          <label className="block text-sm text-gray-400 mb-1">{t().player2Label}</label>
           <input
             type="text"
             placeholder={t().nickname}

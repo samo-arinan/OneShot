@@ -1,6 +1,7 @@
 import type { MatchLevel, RoundRecord } from '../types'
 import { AbstractArt } from './AbstractArt'
 import { t } from '../lib/i18n'
+import type { Messages } from '../lib/i18n'
 
 interface RoundResultScreenProps {
   record: RoundRecord
@@ -17,11 +18,11 @@ const colorMap: Record<MatchLevel, string> = {
   opposite: 'text-red-400',
 }
 
-const labelMap: Record<MatchLevel, string> = {
-  perfect: 'Perfect Match!',
-  close: 'Close!',
-  different: 'Different...',
-  opposite: 'Opposite!',
+const labelKey: Record<MatchLevel, keyof Messages> = {
+  perfect: 'matchPerfect',
+  close: 'matchClose',
+  different: 'matchDifferent',
+  opposite: 'matchOpposite',
 }
 
 const emojiMap: Record<MatchLevel, string> = {
@@ -43,7 +44,7 @@ export function RoundResultScreen({
       <div className="text-sm text-gray-500 mb-2">Round {record.round}</div>
 
       <div className={`text-3xl font-bold mb-4 ${colorMap[record.match]}`}>
-        {emojiMap[record.match]} {labelMap[record.match]}
+        {emojiMap[record.match]} {t()[labelKey[record.match]] as string}
       </div>
 
       <AbstractArt

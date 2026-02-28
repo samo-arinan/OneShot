@@ -66,6 +66,38 @@ describe('t()', () => {
   })
 })
 
+describe('player labels', () => {
+  it('returns Player 1 / Player 2 for en', () => {
+    setLocale('en')
+    expect(t().player1Label).toBe('Player 1')
+    expect(t().player2Label).toBe('Player 2')
+  })
+
+  it('returns プレイヤー1 / プレイヤー2 for ja', () => {
+    setLocale('ja')
+    expect(t().player1Label).toBe('プレイヤー1')
+    expect(t().player2Label).toBe('プレイヤー2')
+  })
+})
+
+describe('match labels', () => {
+  it('returns English match labels', () => {
+    setLocale('en')
+    expect(t().matchPerfect).toBe('Perfect Match!')
+    expect(t().matchClose).toBe('Close!')
+    expect(t().matchDifferent).toBe('Different...')
+    expect(t().matchOpposite).toBe('Opposite!')
+  })
+
+  it('returns Japanese match labels', () => {
+    setLocale('ja')
+    expect(t().matchPerfect).toBe('完全一致！')
+    expect(t().matchClose).toBe('惜しい！')
+    expect(t().matchDifferent).toBe('違う...')
+    expect(t().matchOpposite).toBe('真逆！')
+  })
+})
+
 describe('quote()', () => {
   it('wraps with Japanese brackets for ja', () => {
     setLocale('ja')

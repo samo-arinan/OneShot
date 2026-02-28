@@ -4,6 +4,8 @@ export interface Messages {
   judgeFailed: string
   tagline: string
   nickname: string
+  player1Label: string
+  player2Label: string
   whatDoYouSee: string
   answerFrom: (name: string) => string
   nameWhatDoYouSee: (name: string) => string
@@ -12,6 +14,10 @@ export interface Messages {
   judging: string
   viewResults: string
   nextRound: string
+  matchPerfect: string
+  matchClose: string
+  matchDifferent: string
+  matchOpposite: string
   roundsMatched: string
   roundStreak: string
   playAgain: string
@@ -26,6 +32,8 @@ const ja: Messages = {
   judgeFailed: '判定に失敗しました。もう一度お試しください。',
   tagline: '同じものが、見えるか。',
   nickname: 'ニックネーム',
+  player1Label: 'プレイヤー1',
+  player2Label: 'プレイヤー2',
   whatDoYouSee: '何に見える？',
   answerFrom: (name) => `${name} から回答`,
   nameWhatDoYouSee: (name) => `${name}、何に見える？`,
@@ -34,6 +42,10 @@ const ja: Messages = {
   judging: '判定中...',
   viewResults: '結果を見る',
   nextRound: '次のラウンドへ',
+  matchPerfect: '完全一致！',
+  matchClose: '惜しい！',
+  matchDifferent: '違う...',
+  matchOpposite: '真逆！',
   roundsMatched: 'ラウンド一致',
   roundStreak: 'ラウンド連続一致',
   playAgain: 'もう一回',
@@ -48,6 +60,8 @@ const en: Messages = {
   judgeFailed: 'Judging failed. Please try again.',
   tagline: 'Can you see the same thing?',
   nickname: 'Nickname',
+  player1Label: 'Player 1',
+  player2Label: 'Player 2',
   whatDoYouSee: 'What do you see?',
   answerFrom: (name) => `Answer from ${name}`,
   nameWhatDoYouSee: (name) => `${name}, what do you see?`,
@@ -56,6 +70,10 @@ const en: Messages = {
   judging: 'Judging...',
   viewResults: 'View results',
   nextRound: 'Next round',
+  matchPerfect: 'Perfect Match!',
+  matchClose: 'Close!',
+  matchDifferent: 'Different...',
+  matchOpposite: 'Opposite!',
   roundsMatched: 'rounds matched',
   roundStreak: 'round streak',
   playAgain: 'Play again',
