@@ -20,6 +20,9 @@ export function GameScreen({
 }: GameScreenProps) {
   const [guessA, setGuessA] = useState('')
   const [guessB, setGuessB] = useState('')
+  const [focusedInput, setFocusedInput] = useState<'A' | 'B' | null>(null)
+
+  const maskStyle = { WebkitTextSecurity: 'disc' } as React.CSSProperties
 
   const canSubmit = guessA.trim().length > 0 && guessB.trim().length > 0
 
@@ -69,11 +72,14 @@ export function GameScreen({
             <div>
               <label className="block text-sm text-gray-400 mb-1">{t().player1Label}</label>
               <input
-                type="password"
+                type="text"
                 autoComplete="off"
                 placeholder={t().whatDoYouSee}
                 value={guessA}
                 onChange={(e) => setGuessA(e.target.value)}
+                onFocus={() => setFocusedInput('A')}
+                onBlur={() => setFocusedInput(null)}
+                style={focusedInput !== 'A' && guessA ? maskStyle : undefined}
                 className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
                 maxLength={50}
                 autoFocus
@@ -82,11 +88,14 @@ export function GameScreen({
             <div>
               <label className="block text-sm text-gray-400 mb-1">{t().player2Label}</label>
               <input
-                type="password"
+                type="text"
                 autoComplete="off"
                 placeholder={t().whatDoYouSee}
                 value={guessB}
                 onChange={(e) => setGuessB(e.target.value)}
+                onFocus={() => setFocusedInput('B')}
+                onBlur={() => setFocusedInput(null)}
+                style={focusedInput !== 'B' && guessB ? maskStyle : undefined}
                 className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
                 maxLength={50}
               />
