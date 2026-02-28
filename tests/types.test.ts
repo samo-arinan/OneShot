@@ -5,7 +5,6 @@ import type {
   MatchLevel,
   VisualParams,
   Scene,
-  SceneRenderParams,
   Point,
   RoundRecord,
   JudgeRequest,
@@ -91,7 +90,7 @@ describe('types', () => {
       id: 'test',
       name: 'Test Scene',
       category: 'abstract',
-      render: (_params: SceneRenderParams) => '<svg></svg>',
+      render: () => '<svg></svg>',
     }
     expect(scene.id).toBe('test')
     expect(scene.category).toBe('abstract')
