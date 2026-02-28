@@ -29,7 +29,8 @@ export function AbstractArt({ params, width = 600, height = 400, className = '' 
 
   return (
     <div
-      className={className}
+      className={`art-container ${className}`}
+      style={{ width, height, overflow: 'hidden' }}
       dangerouslySetInnerHTML={{ __html: svgString }}
     />
   )
