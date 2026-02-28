@@ -10,7 +10,6 @@ describe('WaitingScreen', () => {
     // Type-level test: these assignments verify the component's prop interface
     const _props: Parameters<typeof WaitingScreen>[0] = {
       roomCode: 'ABC123',
-      myNickname: 'Alice',
       onCancel: () => {},
     }
     expect(_props.roomCode).toBe('ABC123')

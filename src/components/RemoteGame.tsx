@@ -18,8 +18,7 @@ type RemotePhase = 'waiting' | 'lobby' | 'playing' | 'judging' | 'roundResult' |
 
 interface RemoteState {
   phase: RemotePhase
-  nicknameA: string
-  nicknameB: string
+  hasOpponent: boolean
   currentRound: number
   currentParams: VisualParams | null
   previousSceneIds: string[]
@@ -28,20 +27,20 @@ interface RemoteState {
   myGuessSubmitted: boolean
   opponentGuessSubmitted: boolean
   opponentDisconnected: boolean
+  revealedGuessA: string | null
+  revealedGuessB: string | null
 }
 
 interface RemoteGameProps {
   roomCode: string
   role: 'host' | 'guest'
-  myNickname: string
   onLeave: () => void
 }
 
-export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGameProps) {
+export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
   const [state, setState] = useState<RemoteState>({
     phase: 'waiting',
-    nicknameA: '',
-    nicknameB: '',
+    hasOpponent: false,
     currentRound: 0,
     currentParams: null,
     previousSceneIds: [],
@@ -50,23 +49,22 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
     myGuessSubmitted: false,
     opponentGuessSubmitted: false,
     opponentDisconnected: false,
+    revealedGuessA: null,
+    revealedGuessB: null,
   })
 
   const sendRef = useRef<(msg: ClientMessage) => void>(() => {})
 
   const callJudge = useCallback(async (guessA: string, guessB: string) => {
     setState((prev) => {
-      // Capture values from current state for the async call
       const round = prev.currentRound
-      const nickA = prev.nicknameA
-      const nickB = prev.nicknameB
       const history = prev.history
       const params = prev.currentParams
 
       judgeGuesses({
         round,
-        nicknameA: nickA,
-        nicknameB: nickB,
+        nicknameA: t().player1Label,
+        nicknameB: t().player2Label,
         guessA,
         guessB,
         history,
@@ -84,8 +82,8 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
           try {
             const finalResult = await judgeGuesses({
               round,
-              nicknameA: nickA,
-              nicknameB: nickB,
+              nicknameA: t().player1Label,
+              nicknameB: t().player2Label,
               guessA, guessB,
               history: fullHistory,
               isFinal: true,
@@ -125,7 +123,7 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
     switch (msg.type) {
       case 'room_state': {
         const rs = msg.state
-        const hasOpponent = role === 'host' ? !!rs.nicknameB : !!rs.nicknameA
+        const hasOpponent = rs.hasHost && rs.hasGuest
         let phase: RemotePhase = 'waiting'
         if (rs.phase === 'gameOver') phase = 'gameOver'
         else if (rs.phase === 'roundResult') phase = 'roundResult'
@@ -136,8 +134,7 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
         setState((prev) => ({
           ...prev,
           phase,
-          nicknameA: rs.nicknameA,
-          nicknameB: rs.nicknameB,
+          hasOpponent,
           currentRound: rs.currentRound,
           currentParams: rs.currentParams,
           history: rs.history.map((r) => ({
@@ -154,10 +151,8 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
 
       case 'player_joined':
         setState((prev) => {
-          const next = { ...prev }
-          if (msg.role === 'host') next.nicknameA = msg.nickname
-          else next.nicknameB = msg.nickname
-          if (next.nicknameA && next.nicknameB && next.phase === 'waiting') {
+          const next = { ...prev, hasOpponent: true }
+          if (next.phase === 'waiting') {
             next.phase = 'lobby'
           }
           return next
@@ -172,6 +167,8 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
           currentParams: msg.params,
           myGuessSubmitted: false,
           opponentGuessSubmitted: false,
+          revealedGuessA: null,
+          revealedGuessB: null,
         }))
         break
 
@@ -189,6 +186,8 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
           phase: 'judging',
           myGuessSubmitted: true,
           opponentGuessSubmitted: true,
+          revealedGuessA: msg.guessA,
+          revealedGuessB: msg.guessB,
         }))
         if (role === 'host') {
           callJudge(msg.guessA, msg.guessB)
@@ -212,7 +211,8 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
       case 'game_over':
         setState((prev) => ({
           ...prev,
-          phase: 'gameOver',
+          // Don't override roundResult phase — let user see last round's result first
+          phase: prev.phase === 'roundResult' ? 'roundResult' : 'gameOver',
           finalComment: msg.finalComment,
         }))
         break
@@ -233,16 +233,12 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
   const { send, connected } = useRoom({
     roomCode,
     role,
-    nickname: myNickname,
     onMessage: handleMessage,
   })
 
   useEffect(() => {
     sendRef.current = send
   })
-
-  const myNick = role === 'host' ? state.nicknameA : state.nicknameB
-  const opponentNick = role === 'host' ? state.nicknameB : state.nicknameA
 
   const matchCount = useMemo(() =>
     state.history.filter((r) => r.match === 'perfect' || r.match === 'close').length,
@@ -269,6 +265,10 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
       return { ...prev, previousSceneIds: [...prev.previousSceneIds, params.sceneId] }
     })
   }, [role, send])
+
+  const handleViewResults = useCallback(() => {
+    setState((prev) => ({ ...prev, phase: 'gameOver' }))
+  }, [])
 
   const handleRestart = useCallback(() => {
     send({ type: 'play_again' })
@@ -307,7 +307,6 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
       return (
         <WaitingScreen
           roomCode={roomCode}
-          myNickname={myNick || myNickname}
           onCancel={onLeave}
         />
       )
@@ -316,8 +315,6 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
       return (
         <RoomLobby
           roomCode={roomCode}
-          nicknameA={state.nicknameA}
-          nicknameB={state.nicknameB}
           isHost={role === 'host'}
           onStartGame={handleStartGame}
         />
@@ -329,13 +326,14 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
         <RemoteGameScreen
           round={state.currentRound}
           params={state.currentParams}
-          myNickname={myNick || myNickname}
-          opponentNickname={opponentNick}
+          myRole={role}
           matchCount={matchCount}
           isJudging={state.phase === 'judging'}
           myGuessSubmitted={state.myGuessSubmitted}
           opponentGuessSubmitted={state.opponentGuessSubmitted}
           onSubmitGuess={handleSubmitGuess}
+          revealedGuessA={state.revealedGuessA}
+          revealedGuessB={state.revealedGuessB}
         />
       ) : null
 
@@ -346,10 +344,8 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
       return (
         <RoundResultScreen
           record={lastRecord}
-          nicknameA={state.nicknameA}
-          nicknameB={state.nicknameB}
           isGameOver={isGameOver}
-          onNext={handleNextRound}
+          onNext={isGameOver ? handleViewResults : handleNextRound}
         />
       )
     }
@@ -357,8 +353,6 @@ export function RemoteGame({ roomCode, role, myNickname, onLeave }: RemoteGamePr
     case 'gameOver':
       return (
         <ResultsScreen
-          nicknameA={state.nicknameA}
-          nicknameB={state.nicknameB}
           history={state.history}
           finalComment={state.finalComment}
           onRestart={handleRestart}

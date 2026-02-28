@@ -9,8 +9,6 @@ describe('RoomLobby', () => {
   it('accepts required props', () => {
     const props = {
       roomCode: 'ABC123',
-      nicknameA: 'Alice',
-      nicknameB: 'Bob',
       isHost: true,
       onStartGame: () => {},
     }

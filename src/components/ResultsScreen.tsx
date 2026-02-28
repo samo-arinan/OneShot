@@ -3,8 +3,6 @@ import { AbstractArt } from './AbstractArt'
 import { t } from '../lib/i18n'
 
 interface ResultsScreenProps {
-  nicknameA: string
-  nicknameB: string
   history: RoundRecord[]
   finalComment: string | null
   onRestart: () => void
@@ -26,8 +24,6 @@ const matchColor: Record<MatchLevel, string> = {
 }
 
 export function ResultsScreen({
-  nicknameA,
-  nicknameB,
   history,
   finalComment,
   onRestart,
@@ -44,7 +40,7 @@ export function ResultsScreen({
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col items-center p-6">
       <h2 className="text-2xl font-bold mb-1">Game Over</h2>
       <div className="text-gray-400 text-sm mb-4">
-        {nicknameA} & {nicknameB}
+        {t().player1Label} & {t().player2Label}
       </div>
 
       <div className="text-5xl font-bold text-blue-400 mb-1">
@@ -79,10 +75,10 @@ export function ResultsScreen({
                   <span className="text-xs">{matchIcon[r.match]}</span>
                 </div>
                 <div className="text-sm truncate">
-                  {nicknameA}: {t().quote(r.guessA)}
+                  {t().player1Label}: {t().quote(r.guessA)}
                 </div>
                 <div className="text-sm truncate">
-                  {nicknameB}: {t().quote(r.guessB)}
+                  {t().player2Label}: {t().quote(r.guessB)}
                 </div>
               </div>
             </div>

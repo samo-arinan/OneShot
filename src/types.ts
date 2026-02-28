@@ -69,15 +69,12 @@ export interface RemoteGameState {
   role: PlayerRole
   connected: boolean
   opponentConnected: boolean
-  opponentNickname: string
   myGuessSubmitted: boolean
   opponentGuessSubmitted: boolean
 }
 
 export interface GameState {
   phase: GamePhase
-  nicknameA: string
-  nicknameB: string
   currentRound: number
   currentParams: VisualParams
   previousSceneIds: string[]

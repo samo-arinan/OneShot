@@ -13,8 +13,6 @@ import type { GameState, RoundRecord } from '../types'
 function createInitialState(): GameState {
   return {
     phase: 'start',
-    nicknameA: '',
-    nicknameB: '',
     currentRound: 0,
     currentParams: { seed: 0, coherence: 1, sceneId: '' },
     previousSceneIds: [],
@@ -30,20 +28,18 @@ function createInitialState(): GameState {
 
 interface LocalGameProps {
   roomCodeFromUrl?: string | null
-  onCreateRoom?: (nickname: string) => void
-  onJoinRoom?: (nickname: string) => void
+  onCreateRoom?: () => void
+  onJoinRoom?: () => void
 }
 
 export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGameProps = {}) {
   const [state, setState] = useState<GameState>(createInitialState)
 
-  const startGame = useCallback((nicknameA: string, nicknameB: string) => {
+  const startGame = useCallback(() => {
     const params = generateParams(1, [], SCENE_REGISTRY)
     setState({
       ...createInitialState(),
       phase: 'playing',
-      nicknameA,
-      nicknameB,
       currentRound: 1,
       currentParams: params,
       previousSceneIds: [params.sceneId],
@@ -56,8 +52,8 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
     try {
       const result = await judgeGuesses({
         round: state.currentRound,
-        nicknameA: state.nicknameA,
-        nicknameB: state.nicknameB,
+        nicknameA: t().player1Label,
+        nicknameB: t().player2Label,
         guessA,
         guessB,
         history: state.history,
@@ -86,8 +82,8 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
       if (isGameOver) {
         judgeGuesses({
           round: state.currentRound,
-          nicknameA: state.nicknameA,
-          nicknameB: state.nicknameB,
+          nicknameA: t().player1Label,
+          nicknameB: t().player2Label,
           guessA,
           guessB,
           history: fullHistory,
@@ -105,7 +101,7 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
         error: t().judgeFailed,
       }))
     }
-  }, [state.currentRound, state.nicknameA, state.nicknameB, state.currentParams, state.history])
+  }, [state.currentRound, state.currentParams, state.history])
 
   const nextRound = useCallback(() => {
     setState((prev) => {
@@ -162,8 +158,6 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
           <GameScreen
             round={state.currentRound}
             params={state.currentParams}
-            nicknameA={state.nicknameA}
-            nicknameB={state.nicknameB}
             matchCount={matchCount}
             isJudging={state.isJudging}
             onSubmit={submitGuesses}
@@ -183,8 +177,6 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
       return (
         <RoundResultScreen
           record={lastRecord}
-          nicknameA={state.nicknameA}
-          nicknameB={state.nicknameB}
           isGameOver={isGameOver}
           onNext={nextRound}
         />
@@ -194,8 +186,6 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
     case 'results':
       return (
         <ResultsScreen
-          nicknameA={state.nicknameA}
-          nicknameB={state.nicknameB}
           history={state.history}
           finalComment={state.finalComment}
           onRestart={restart}

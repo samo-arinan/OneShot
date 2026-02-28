@@ -23,8 +23,8 @@ export type RoomPhase = 'waiting' | 'playing' | 'judging' | 'roundResult' | 'gam
 
 export interface RoomSyncState {
   phase: RoomPhase
-  nicknameA: string
-  nicknameB: string
+  hasHost: boolean
+  hasGuest: boolean
   currentRound: number
   currentParams: VisualParamsWire | null
   history: RoundRecordWire[]
@@ -37,7 +37,7 @@ export interface RoomSyncState {
 // === Client → Server messages ===
 
 export type ClientMessage =
-  | { type: 'join'; nickname: string; role: 'host' | 'guest' }
+  | { type: 'join'; role: 'host' | 'guest' }
   | { type: 'start_round'; round: number; params: VisualParamsWire }
   | { type: 'submit_guess'; guess: string }
   | { type: 'judge_result'; result: JudgeResultPayload }
@@ -53,7 +53,7 @@ export interface JudgeResultPayload {
 
 export type ServerMessage =
   | { type: 'room_state'; state: RoomSyncState }
-  | { type: 'player_joined'; nickname: string; role: 'host' | 'guest' }
+  | { type: 'player_joined'; role: 'host' | 'guest' }
   | { type: 'round_start'; round: number; params: VisualParamsWire }
   | { type: 'guess_received'; from: 'A' | 'B' }
   | { type: 'both_guessed'; guessA: string; guessB: string }

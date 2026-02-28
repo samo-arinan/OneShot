@@ -70,7 +70,7 @@ describe('room client module', () => {
       query: { role: 'host' },
     })
 
-    const msg = JSON.stringify({ type: 'join', nickname: 'Alice', role: 'host' })
+    const msg = JSON.stringify({ type: 'join', role: 'host' })
     socket.send(msg)
 
     expect(mockSend).toHaveBeenCalledWith(msg)

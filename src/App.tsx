@@ -8,27 +8,24 @@ import type { PlayerRole } from './types'
 interface RemoteSession {
   roomCode: string
   role: PlayerRole
-  nickname: string
 }
 
 export default function App() {
   const roomCodeFromUrl = useMemo(() => parseRoomFromUrl(), [])
   const [remoteSession, setRemoteSession] = useState<RemoteSession | null>(null)
 
-  const createRoom = useCallback((nickname: string) => {
+  const createRoom = useCallback(() => {
     setRemoteSession({
       roomCode: generateRoomCode(),
       role: 'host',
-      nickname,
     })
   }, [])
 
-  const joinRoom = useCallback((nickname: string) => {
+  const joinRoom = useCallback(() => {
     if (roomCodeFromUrl) {
       setRemoteSession({
         roomCode: roomCodeFromUrl,
         role: 'guest',
-        nickname,
       })
     }
   }, [roomCodeFromUrl])
@@ -43,7 +40,6 @@ export default function App() {
       <RemoteGame
         roomCode={remoteSession.roomCode}
         role={remoteSession.role}
-        myNickname={remoteSession.nickname}
         onLeave={leaveRoom}
       />
     )

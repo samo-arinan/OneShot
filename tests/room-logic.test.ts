@@ -13,8 +13,8 @@ describe('createEmptyState', () => {
   it('returns waiting phase with empty fields', () => {
     const state = createEmptyState()
     expect(state.phase).toBe('waiting')
-    expect(state.nicknameA).toBe('')
-    expect(state.nicknameB).toBe('')
+    expect(state.hasHost).toBe(false)
+    expect(state.hasGuest).toBe(false)
     expect(state.currentRound).toBe(0)
     expect(state.currentParams).toBeNull()
     expect(state.history).toHaveLength(0)
@@ -26,35 +26,34 @@ describe('createEmptyState', () => {
 })
 
 describe('handleJoin', () => {
-  it('sets nicknameA for host', () => {
+  it('sets hasHost for host', () => {
     const state = createEmptyState()
-    const result = handleJoin(state, 'host', 'Alice')
-    expect(result.state.nicknameA).toBe('Alice')
-    expect(result.state.nicknameB).toBe('')
+    const result = handleJoin(state, 'host')
+    expect(result.state.hasHost).toBe(true)
+    expect(result.state.hasGuest).toBe(false)
   })
 
-  it('sets nicknameB for guest', () => {
+  it('sets hasGuest for guest', () => {
     const state = createEmptyState()
-    const result = handleJoin(state, 'guest', 'Bob')
-    expect(result.state.nicknameB).toBe('Bob')
-    expect(result.state.nicknameA).toBe('')
+    const result = handleJoin(state, 'guest')
+    expect(result.state.hasGuest).toBe(true)
+    expect(result.state.hasHost).toBe(false)
   })
 
   it('broadcasts player_joined message', () => {
     const state = createEmptyState()
-    const result = handleJoin(state, 'host', 'Alice')
+    const result = handleJoin(state, 'host')
     expect(result.messages).toHaveLength(1)
     expect(result.messages[0]).toEqual({
       type: 'player_joined',
-      nickname: 'Alice',
       role: 'host',
     })
   })
 
   it('does not mutate original state', () => {
     const state = createEmptyState()
-    handleJoin(state, 'host', 'Alice')
-    expect(state.nicknameA).toBe('')
+    handleJoin(state, 'host')
+    expect(state.hasHost).toBe(false)
   })
 })
 
@@ -62,8 +61,8 @@ describe('handleStartRound', () => {
   it('sets round, params, and phase to playing', () => {
     const state: RoomSyncState = {
       ...createEmptyState(),
-      nicknameA: 'Alice',
-      nicknameB: 'Bob',
+      hasHost: true,
+      hasGuest: true,
     }
     const params = { seed: 42, coherence: 0.9, sceneId: 'landscape_1' }
     const result = handleStartRound(state, 'host', 1, params)
@@ -102,8 +101,8 @@ describe('handleGuess', () => {
   const playingState: RoomSyncState = {
     ...createEmptyState(),
     phase: 'playing',
-    nicknameA: 'Alice',
-    nicknameB: 'Bob',
+    hasHost: true,
+    hasGuest: true,
     currentRound: 1,
     currentParams: { seed: 42, coherence: 0.9, sceneId: 'test' },
   }
@@ -162,8 +161,8 @@ describe('handleJudgeResult', () => {
   const judgingState: RoomSyncState = {
     ...createEmptyState(),
     phase: 'judging',
-    nicknameA: 'Alice',
-    nicknameB: 'Bob',
+    hasHost: true,
+    hasGuest: true,
     currentRound: 1,
     currentParams: { seed: 42, coherence: 0.9, sceneId: 'test' },
   }
@@ -287,12 +286,12 @@ describe('handleJudgeResult', () => {
 })
 
 describe('handlePlayAgain', () => {
-  it('resets state but preserves nicknames', () => {
+  it('resets state but preserves player presence', () => {
     const state: RoomSyncState = {
       ...createEmptyState(),
       phase: 'gameOver',
-      nicknameA: 'Alice',
-      nicknameB: 'Bob',
+      hasHost: true,
+      hasGuest: true,
       currentRound: 3,
       history: [
         { round: 1, params: { seed: 1, coherence: 0.9, sceneId: 'a' },
@@ -302,8 +301,8 @@ describe('handlePlayAgain', () => {
     }
     const result = handlePlayAgain(state)
     expect(result.state.phase).toBe('waiting')
-    expect(result.state.nicknameA).toBe('Alice')
-    expect(result.state.nicknameB).toBe('Bob')
+    expect(result.state.hasHost).toBe(true)
+    expect(result.state.hasGuest).toBe(true)
     expect(result.state.currentRound).toBe(0)
     expect(result.state.history).toHaveLength(0)
     expect(result.state.finalComment).toBeNull()
@@ -313,8 +312,8 @@ describe('handlePlayAgain', () => {
     const state: RoomSyncState = {
       ...createEmptyState(),
       phase: 'gameOver',
-      nicknameA: 'Alice',
-      nicknameB: 'Bob',
+      hasHost: true,
+      hasGuest: true,
     }
     const result = handlePlayAgain(state)
     expect(result.messages).toHaveLength(1)

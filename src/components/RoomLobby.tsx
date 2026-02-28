@@ -2,16 +2,12 @@ import { t } from '../lib/i18n'
 
 interface RoomLobbyProps {
   roomCode: string
-  nicknameA: string
-  nicknameB: string
   isHost: boolean
   onStartGame: () => void
 }
 
 export function RoomLobby({
   roomCode,
-  nicknameA,
-  nicknameB,
   isHost,
   onStartGame,
 }: RoomLobbyProps) {
@@ -24,11 +20,11 @@ export function RoomLobby({
       <div className="bg-gray-900 rounded-lg p-6 w-full max-w-sm mb-6">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-3 h-3 rounded-full bg-green-500" />
-          <span className="text-lg">{nicknameA}</span>
+          <span className="text-lg">{t().player1Label}</span>
         </div>
         <div className="flex items-center gap-3">
           <div className="w-3 h-3 rounded-full bg-green-500" />
-          <span className="text-lg">{nicknameB}</span>
+          <span className="text-lg">{t().player2Label}</span>
         </div>
       </div>
 
@@ -41,7 +37,7 @@ export function RoomLobby({
         </button>
       ) : (
         <div className="text-gray-500 text-sm animate-pulse">
-          {t().waitingForAnswer(nicknameA)}
+          {t().waitingForOpponent}
         </div>
       )}
     </div>

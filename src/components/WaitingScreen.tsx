@@ -3,11 +3,10 @@ import { t } from '../lib/i18n'
 
 interface WaitingScreenProps {
   roomCode: string
-  myNickname: string
   onCancel: () => void
 }
 
-export function WaitingScreen({ roomCode, myNickname, onCancel }: WaitingScreenProps) {
+export function WaitingScreen({ roomCode, onCancel }: WaitingScreenProps) {
   const [copied, setCopied] = useState(false)
 
   const roomUrl = `${window.location.origin}/room/${roomCode}`
@@ -24,8 +23,6 @@ export function WaitingScreen({ roomCode, myNickname, onCancel }: WaitingScreenP
       <div className="text-5xl font-mono font-bold text-blue-400 tracking-widest mb-4">
         {roomCode}
       </div>
-
-      <p className="text-gray-400 text-sm mb-2">{myNickname}</p>
 
       <p className="text-gray-500 text-sm mb-4 text-center max-w-sm">
         {t().shareLink(roomUrl)}

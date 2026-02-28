@@ -74,8 +74,6 @@ describe('types', () => {
   it('GameState includes previousSceneIds', () => {
     const state: GameState = {
       phase: 'start',
-      nicknameA: '',
-      nicknameB: '',
       currentRound: 0,
       currentParams: { seed: 0, coherence: 1, sceneId: '' },
       previousSceneIds: [],
@@ -112,7 +110,6 @@ describe('types', () => {
       role: 'host',
       connected: true,
       opponentConnected: false,
-      opponentNickname: '',
       myGuessSubmitted: false,
       opponentGuessSubmitted: false,
     }

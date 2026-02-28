@@ -5,8 +5,6 @@ import type { Messages } from '../lib/i18n'
 
 interface RoundResultScreenProps {
   record: RoundRecord
-  nicknameA: string
-  nicknameB: string
   isGameOver: boolean
   onNext: () => void
 }
@@ -34,8 +32,6 @@ const emojiMap: Record<MatchLevel, string> = {
 
 export function RoundResultScreen({
   record,
-  nicknameA,
-  nicknameB,
   isGameOver,
   onNext,
 }: RoundResultScreenProps) {
@@ -56,11 +52,11 @@ export function RoundResultScreen({
 
       <div className="bg-gray-900 rounded-lg p-4 mb-4 w-full max-w-sm">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm text-gray-400">{nicknameA}</span>
+          <span className="text-sm text-gray-400">{t().player1Label}</span>
           <span className="text-gray-100">{t().quote(record.guessA)}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-400">{nicknameB}</span>
+          <span className="text-sm text-gray-400">{t().player2Label}</span>
           <span className="text-gray-100">{t().quote(record.guessB)}</span>
         </div>
       </div>

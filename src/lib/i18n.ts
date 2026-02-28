@@ -3,14 +3,9 @@ export type Locale = 'en' | 'ja'
 export interface Messages {
   judgeFailed: string
   tagline: string
-  nickname: string
   player1Label: string
   player2Label: string
   whatDoYouSee: string
-  answerFrom: (name: string) => string
-  nameWhatDoYouSee: (name: string) => string
-  dontLook: (name: string) => string
-  checkAnswers: string
   judging: string
   viewResults: string
   nextRound: string
@@ -33,27 +28,23 @@ export interface Messages {
   copyLink: string
   linkCopied: string
   waitingForOpponent: string
-  opponentJoined: (name: string) => string
+  opponentJoined: string
   startGame: string
   yourAnswer: string
-  waitingForAnswer: (name: string) => string
+  waitingForOpponentAnswer: string
   opponentAnswered: string
   opponentDisconnected: string
   reconnecting: string
-  enterNickname: string
+  youSuffix: string
+  submitted: string
 }
 
 const ja: Messages = {
   judgeFailed: '判定に失敗しました。もう一度お試しください。',
   tagline: '同じものが、見えるか。',
-  nickname: 'ニックネーム',
   player1Label: 'プレイヤー1',
   player2Label: 'プレイヤー2',
   whatDoYouSee: '何に見える？',
-  answerFrom: (name) => `${name} から回答`,
-  nameWhatDoYouSee: (name) => `${name}、何に見える？`,
-  dontLook: (name) => `${name} は見ないでね`,
-  checkAnswers: '答え合わせ！',
   judging: '判定中...',
   viewResults: '結果を見る',
   nextRound: '次のラウンドへ',
@@ -76,27 +67,23 @@ const ja: Messages = {
   copyLink: 'リンクをコピー',
   linkCopied: 'コピーしました！',
   waitingForOpponent: '相手を待っています...',
-  opponentJoined: (name) => `${name} が参加しました！`,
+  opponentJoined: '相手が参加しました！',
   startGame: 'ゲーム開始',
   yourAnswer: 'あなたの回答',
-  waitingForAnswer: (name) => `${name} の回答を待っています...`,
+  waitingForOpponentAnswer: '相手の回答を待っています...',
   opponentAnswered: '相手が回答しました',
   opponentDisconnected: '相手が切断しました。再接続を待っています...',
   reconnecting: '再接続中...',
-  enterNickname: 'ニックネームを入力して参加',
+  youSuffix: '(あなた)',
+  submitted: '回答済み',
 }
 
 const en: Messages = {
   judgeFailed: 'Judging failed. Please try again.',
   tagline: 'Can you see the same thing?',
-  nickname: 'Nickname',
   player1Label: 'Player 1',
   player2Label: 'Player 2',
   whatDoYouSee: 'What do you see?',
-  answerFrom: (name) => `Answer from ${name}`,
-  nameWhatDoYouSee: (name) => `${name}, what do you see?`,
-  dontLook: (name) => `No peeking, ${name}!`,
-  checkAnswers: 'Check answers!',
   judging: 'Judging...',
   viewResults: 'View results',
   nextRound: 'Next round',
@@ -119,14 +106,15 @@ const en: Messages = {
   copyLink: 'Copy link',
   linkCopied: 'Copied!',
   waitingForOpponent: 'Waiting for opponent...',
-  opponentJoined: (name) => `${name} has joined!`,
+  opponentJoined: 'Opponent has joined!',
   startGame: 'Start Game',
   yourAnswer: 'Your answer',
-  waitingForAnswer: (name) => `Waiting for ${name}...`,
+  waitingForOpponentAnswer: 'Waiting for opponent...',
   opponentAnswered: 'Opponent has answered',
   opponentDisconnected: 'Opponent disconnected. Waiting for reconnection...',
   reconnecting: 'Reconnecting...',
-  enterNickname: 'Enter your nickname to join',
+  youSuffix: '(You)',
+  submitted: 'Submitted',
 }
 
 const messages: Record<Locale, Messages> = { en, ja }

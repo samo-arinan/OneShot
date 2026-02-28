@@ -51,17 +51,11 @@ describe('t()', () => {
 
   it('interpolation functions work for ja', () => {
     setLocale('ja')
-    expect(t().answerFrom('ケン')).toContain('ケン')
-    expect(t().dontLook('ユキ')).toContain('ユキ')
-    expect(t().nameWhatDoYouSee('ケン')).toContain('ケン')
     expect(t().shareScore(3)).toContain('3')
   })
 
   it('interpolation functions work for en', () => {
     setLocale('en')
-    expect(t().answerFrom('Ken')).toContain('Ken')
-    expect(t().dontLook('Yuki')).toContain('Yuki')
-    expect(t().nameWhatDoYouSee('Ken')).toContain('Ken')
     expect(t().shareScore(3)).toContain('3')
   })
 })
@@ -112,7 +106,10 @@ describe('remote mode labels', () => {
     expect(t().opponentAnswered).toBe('Opponent has answered')
     expect(t().opponentDisconnected).toContain('disconnected')
     expect(t().reconnecting).toContain('Reconnecting')
-    expect(t().enterNickname).toContain('nickname')
+    expect(t().opponentJoined).toContain('joined')
+    expect(t().waitingForOpponentAnswer).toContain('Waiting')
+    expect(t().youSuffix).toBe('(You)')
+    expect(t().submitted).toBe('Submitted')
   })
 
   it('returns Japanese remote mode labels', () => {
@@ -125,20 +122,20 @@ describe('remote mode labels', () => {
     expect(t().yourAnswer).toContain('回答')
     expect(t().opponentAnswered).toContain('回答')
     expect(t().opponentDisconnected).toContain('切断')
+    expect(t().opponentJoined).toContain('参加')
+    expect(t().waitingForOpponentAnswer).toContain('待')
+    expect(t().youSuffix).toBe('(あなた)')
+    expect(t().submitted).toBe('回答済み')
   })
 
   it('remote interpolation functions work for en', () => {
     setLocale('en')
     expect(t().shareLink('https://example.com')).toContain('https://example.com')
-    expect(t().opponentJoined('Bob')).toContain('Bob')
-    expect(t().waitingForAnswer('Bob')).toContain('Bob')
   })
 
   it('remote interpolation functions work for ja', () => {
     setLocale('ja')
     expect(t().shareLink('https://example.com')).toContain('https://example.com')
-    expect(t().opponentJoined('ボブ')).toContain('ボブ')
-    expect(t().waitingForAnswer('ボブ')).toContain('ボブ')
   })
 })
 

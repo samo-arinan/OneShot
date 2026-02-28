@@ -44,11 +44,11 @@ describe('protocol types', () => {
     expect(record.match).toBe('close')
   })
 
-  it('RoomSyncState has correct shape', () => {
+  it('RoomSyncState has correct shape with hasHost/hasGuest', () => {
     const state: RoomSyncState = {
       phase: 'waiting',
-      nicknameA: '',
-      nicknameB: '',
+      hasHost: false,
+      hasGuest: false,
       currentRound: 0,
       currentParams: null,
       history: [],
@@ -58,20 +58,19 @@ describe('protocol types', () => {
       guessBSubmitted: false,
     }
     expect(state.phase).toBe('waiting')
-    expect(state.history).toHaveLength(0)
+    expect(state.hasHost).toBe(false)
+    expect(state.hasGuest).toBe(false)
   })
 
-  it('ClientMessage join serializes correctly', () => {
+  it('ClientMessage join serializes without nickname', () => {
     const msg: ClientMessage = {
       type: 'join',
-      nickname: 'Alice',
       role: 'host',
     }
     const json = JSON.stringify(msg)
     const parsed: ClientMessage = JSON.parse(json)
     expect(parsed.type).toBe('join')
     if (parsed.type === 'join') {
-      expect(parsed.nickname).toBe('Alice')
       expect(parsed.role).toBe('host')
     }
   })

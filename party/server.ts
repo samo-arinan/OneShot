@@ -64,7 +64,7 @@ export default class OneShotServer implements Party.Server {
 
     switch (msg.type) {
       case 'join': {
-        const result = handleJoin(this.state, role, msg.nickname)
+        const result = handleJoin(this.state, role)
         this.state = result.state
         await this.saveState()
         this.broadcastAll(result.messages)

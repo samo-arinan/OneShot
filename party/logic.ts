@@ -14,8 +14,8 @@ export interface HandleResult {
 export function createEmptyState(): RoomSyncState {
   return {
     phase: 'waiting',
-    nicknameA: '',
-    nicknameB: '',
+    hasHost: false,
+    hasGuest: false,
     currentRound: 0,
     currentParams: null,
     history: [],
@@ -29,17 +29,16 @@ export function createEmptyState(): RoomSyncState {
 export function handleJoin(
   state: RoomSyncState,
   role: 'host' | 'guest',
-  nickname: string
 ): HandleResult {
   const next = { ...state }
   if (role === 'host') {
-    next.nicknameA = nickname
+    next.hasHost = true
   } else {
-    next.nicknameB = nickname
+    next.hasGuest = true
   }
   return {
     state: next,
-    messages: [{ type: 'player_joined', nickname, role }],
+    messages: [{ type: 'player_joined', role }],
   }
 }
 
@@ -144,8 +143,8 @@ export function handleJudgeResult(
 export function handlePlayAgain(state: RoomSyncState): HandleResult {
   const next: RoomSyncState = {
     ...createEmptyState(),
-    nicknameA: state.nicknameA,
-    nicknameB: state.nicknameB,
+    hasHost: state.hasHost,
+    hasGuest: state.hasGuest,
   }
   return {
     state: next,

@@ -6,25 +6,27 @@ import type { VisualParams } from '../types'
 interface RemoteGameScreenProps {
   round: number
   params: VisualParams
-  myNickname: string
-  opponentNickname: string
+  myRole: 'host' | 'guest'
   matchCount: number
   isJudging: boolean
   myGuessSubmitted: boolean
   opponentGuessSubmitted: boolean
   onSubmitGuess: (guess: string) => void
+  revealedGuessA?: string | null
+  revealedGuessB?: string | null
 }
 
 export function RemoteGameScreen({
   round,
   params,
-  myNickname,
-  opponentNickname,
+  myRole,
   matchCount,
   isJudging,
   myGuessSubmitted,
   opponentGuessSubmitted,
   onSubmitGuess,
+  revealedGuessA,
+  revealedGuessB,
 }: RemoteGameScreenProps) {
   const [guess, setGuess] = useState('')
 
@@ -41,6 +43,9 @@ export function RemoteGameScreen({
       handleSubmit()
     }
   }
+
+  const myLabel = myRole === 'host' ? t().player1Label : t().player2Label
+  const opponentLabel = myRole === 'host' ? t().player2Label : t().player1Label
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col items-center p-6">
@@ -62,46 +67,70 @@ export function RemoteGameScreen({
 
       <div className="w-full max-w-sm">
         {isJudging && (
-          <div className="text-center">
-            <div className="text-gray-400 animate-pulse text-lg">{t().judging}</div>
-          </div>
-        )}
-
-        {!isJudging && !myGuessSubmitted && (
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              {t().nameWhatDoYouSee(myNickname)}
-            </label>
-            <input
-              type="text"
-              placeholder={t().whatDoYouSee}
-              value={guess}
-              onChange={(e) => setGuess(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors mb-3"
-              maxLength={50}
-              autoFocus
-            />
-            <button
-              onClick={handleSubmit}
-              disabled={!guess.trim()}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white py-3 rounded-lg font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
-            >
-              OK
-            </button>
-          </div>
-        )}
-
-        {!isJudging && myGuessSubmitted && (
-          <div className="text-center space-y-3">
-            <div className="text-green-400 text-sm">{t().yourAnswer}: {t().quote(guess)}</div>
-            {opponentGuessSubmitted ? (
-              <div className="text-gray-400 text-sm">{t().opponentAnswered}</div>
-            ) : (
-              <div className="text-gray-500 text-sm animate-pulse">
-                {t().waitingForAnswer(opponentNickname)}
+          <div className="space-y-4">
+            {revealedGuessA && revealedGuessB && (
+              <div className="bg-gray-900 rounded-lg p-4 w-full">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-400">{t().player1Label}</span>
+                  <span className="text-gray-100">{t().quote(revealedGuessA)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-400">{t().player2Label}</span>
+                  <span className="text-gray-100">{t().quote(revealedGuessB)}</span>
+                </div>
               </div>
             )}
+            <div className="text-center">
+              <div className="text-gray-400 animate-pulse text-lg">{t().judging}</div>
+            </div>
+          </div>
+        )}
+
+        {!isJudging && (
+          <div className="space-y-4">
+            {/* My input box */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">
+                {myLabel} {t().youSuffix}
+              </label>
+              {!myGuessSubmitted ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder={t().whatDoYouSee}
+                    value={guess}
+                    onChange={(e) => setGuess(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+                    maxLength={50}
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!guess.trim()}
+                    className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-600 text-white px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    OK
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-green-400 text-sm">
+                  {t().quote(guess)}
+                </div>
+              )}
+            </div>
+
+            {/* Opponent box */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">{opponentLabel}</label>
+              <div className="bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 text-sm">
+                {opponentGuessSubmitted ? (
+                  <span className="text-green-400">{t().submitted}</span>
+                ) : (
+                  <span className="text-gray-600 animate-pulse">{t().waitingForOpponentAnswer}</span>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
