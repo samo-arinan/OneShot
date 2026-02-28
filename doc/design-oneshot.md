@@ -761,28 +761,56 @@ interface RoundRecord {
 
 ---
 
-## Remote Mode (Phase 3)
+## Remote Mode (Phase 3) — Implemented
+
+### Architecture
+
+- **PartyKit WebSocket server** for real-time room coordination
+- **Vercel Functions** for judge API (unchanged)
+- Host generates `VisualParams`, both devices render identical art via seeded RNG
+
+### Protocol
+
+Client → Server: `join`, `start_round`, `submit_guess`, `judge_result`, `play_again`
+Server → Client: `room_state`, `player_joined`, `round_start`, `guess_received`, `both_guessed`, `round_result`, `game_over`, `opponent_disconnected/reconnected`
 
 ### Flow
 
 ```
-1. Player 1 opens the start screen
-2. Enters nicknames for both players
-3. Clicks "Create & share URL"
-4. URL is generated with Base64-encoded nicknames
-5. Sends URL to Player 2
+1. Player 1 (Host) enters nickname, clicks "Create Room"
+2. Room code generated (e.g. XK7M2N), displayed with shareable URL
+3. Host waits for guest to join
 
---- Player 2 opens the URL ---
+--- Player 2 opens /room/XK7M2N ---
 
-6. Nicknames are displayed (locked)
-7. Game starts
+4. Player 2 (Guest) enters nickname, clicks "Join Room"
+5. Both see RoomLobby with green connection indicators
+6. Host clicks "Start Game"
 
 --- During game ---
 
-Remote "What does this look like?" input:
-  - MVP: Completed on Player 2's device (Player 2 enters for both)
-  - Ideal: Simultaneous play on both devices (requires WebSocket → outside MVP scope)
+7. Both see same abstract art (same VisualParams via PartyKit)
+8. Each enters own guess independently on their device
+9. Server collects both guesses, notifies host
+10. Host calls /api/judge, sends result through PartyKit
+11. Both see RoundResultScreen
+12. Host advances to next round (or game over)
 ```
+
+### Disconnection Handling
+
+- PartySocket auto-reconnects with exponential backoff
+- Room state persisted in PartyKit storage (Durable Objects)
+- On reconnect, server sends full `room_state`
+- `hibernate: true` for cost efficiency
+
+### Key Files
+
+- `party/server.ts` — PartyKit server (wraps `party/logic.ts`)
+- `party/protocol.ts` — Shared WebSocket message types
+- `src/lib/room.ts` — `useRoom` hook (PartySocket wrapper)
+- `src/components/RemoteGame.tsx` — Remote mode orchestrator
+- `src/components/RemoteGameScreen.tsx` — Per-player input screen
 
 ---
 

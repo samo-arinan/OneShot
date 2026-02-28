@@ -754,28 +754,56 @@ interface RoundRecord {
 
 ---
 
-## リモートモード（Phase 3）
+## リモートモード（Phase 3）— 実装済み
+
+### アーキテクチャ
+
+- **PartyKit WebSocketサーバー**: リアルタイムルーム管理
+- **Vercel Functions**: Judge API（変更なし）
+- ホストが `VisualParams` を生成し、両端末がシードRNGで同一アートを描画
+
+### プロトコル
+
+Client → Server: `join`, `start_round`, `submit_guess`, `judge_result`, `play_again`
+Server → Client: `room_state`, `player_joined`, `round_start`, `guess_received`, `both_guessed`, `round_result`, `game_over`, `opponent_disconnected/reconnected`
 
 ### フロー
 
 ```
-1. Player 1がスタート画面を開く
-2. ニックネーム2人分を入力
-3. 「URLを作って送る」をクリック
-4. ニックネームをBase64エンコードしたURLが生成される
-5. URLをPlayer 2に送る
+1. Player 1（ホスト）がニックネーム入力、「ルームを作成」クリック
+2. ルームコード生成（例: XK7M2N）、共有URLを表示
+3. ホストはゲストの参加を待つ
 
---- Player 2がURLを開く ---
+--- Player 2が /room/XK7M2N を開く ---
 
-6. ニックネームがロック済みで表示
-7. ゲーム開始
+4. Player 2（ゲスト）がニックネーム入力、「ルームに参加」クリック
+5. 両者にRoomLobby表示（接続状態の緑インジケーター）
+6. ホストが「ゲーム開始」クリック
 
 --- ゲーム中 ---
 
-リモートでの「何に見える？」入力:
-  - MVP: Player 2の端末で完結（Player 1の分もPlayer 2が代理入力）
-  - 理想: 両端末で同時プレイ（WebSocket必要 → MVP外）
+7. 両者が同じ抽象アートを閲覧（PartyKit経由で同じVisualParams）
+8. 各自が自分のデバイスで回答を入力
+9. サーバーが両方の回答を収集、ホストに通知
+10. ホストが /api/judge を呼び、結果をPartyKit経由で配信
+11. 両者にRoundResultScreen表示
+12. ホストが次ラウンドに進む（またはゲームオーバー）
 ```
+
+### 切断処理
+
+- PartySocket が指数バックオフで自動再接続
+- ルーム状態はPartyKit storage（Durable Objects）に永続化
+- 再接続時、サーバーが完全な `room_state` を送信
+- `hibernate: true` でコスト効率化
+
+### 主要ファイル
+
+- `party/server.ts` — PartyKitサーバー（`party/logic.ts`のラッパー）
+- `party/protocol.ts` — 共有WebSocketメッセージ型
+- `src/lib/room.ts` — `useRoom`フック（PartySocketラッパー）
+- `src/components/RemoteGame.tsx` — リモートモードオーケストレーター
+- `src/components/RemoteGameScreen.tsx` — プレイヤー別入力画面
 
 ---
 
