@@ -38,10 +38,7 @@ export function ResultsScreen({
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col items-center p-6">
-      <h2 className="text-2xl font-bold mb-1">Game Over</h2>
-      <div className="text-gray-400 text-sm mb-4">
-        {t().player1Label} & {t().player2Label}
-      </div>
+      <h2 className="text-2xl font-bold mb-4">Game Over</h2>
 
       <div className="text-5xl font-bold text-blue-400 mb-1">
         {score}
@@ -65,9 +62,9 @@ export function ResultsScreen({
             <div className="flex items-center gap-3">
               <AbstractArt
                 params={r.params}
-                width={48}
-                height={48}
-                className="shrink-0"
+                width={32}
+                height={32}
+                className="shrink-0 rounded"
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
