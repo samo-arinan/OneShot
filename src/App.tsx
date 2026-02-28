@@ -22,6 +22,7 @@ function createInitialState(): GameState {
     lastResult: null,
     isJudging: false,
     error: null,
+    finalComment: null,
   }
 }
 
@@ -63,6 +64,9 @@ export default function App() {
         comment: result.comment,
       }
 
+      const isGameOver = result.match === 'different' || result.match === 'opposite'
+      const fullHistory = [...state.history, record]
+
       setState((prev) => ({
         ...prev,
         phase: 'roundResult',
@@ -70,6 +74,22 @@ export default function App() {
         lastResult: result,
         isJudging: false,
       }))
+
+      if (isGameOver) {
+        judgeGuesses({
+          round: state.currentRound,
+          nicknameA: state.nicknameA,
+          nicknameB: state.nicknameB,
+          guessA,
+          guessB,
+          history: fullHistory,
+          isFinal: true,
+        }).then((finalResult) => {
+          setState((prev) => ({ ...prev, finalComment: finalResult.comment }))
+        }).catch(() => {
+          // Final comment is optional; silently ignore errors
+        })
+      }
     } catch {
       setState((prev) => ({
         ...prev,
@@ -162,6 +182,7 @@ export default function App() {
           nicknameA={state.nicknameA}
           nicknameB={state.nicknameB}
           history={state.history}
+          finalComment={state.finalComment}
           onRestart={restart}
           onShare={share}
         />

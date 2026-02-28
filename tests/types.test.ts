@@ -81,6 +81,7 @@ describe('types', () => {
       lastResult: null,
       isJudging: false,
       error: null,
+      finalComment: null,
     }
     expect(Array.isArray(state.previousSceneIds)).toBe(true)
   })

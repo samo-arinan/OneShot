@@ -52,6 +52,7 @@ export interface JudgeRequest {
   guessA: string
   guessB: string
   history: RoundRecord[]
+  isFinal?: boolean
   lang?: 'en' | 'ja'
 }
 
@@ -71,4 +72,5 @@ export interface GameState {
   lastResult: JudgeResponse | null
   isJudging: boolean
   error: string | null
+  finalComment: string | null
 }

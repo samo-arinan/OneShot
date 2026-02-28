@@ -65,4 +65,28 @@ describe('judgeGuesses', () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('Network error'))
     await expect(judgeGuesses(mockRequest)).rejects.toThrow('Network error')
   })
+
+  it('sends isFinal flag when provided', async () => {
+    const mockResponse: JudgeResponse = { match: 'different', comment: 'Summary!' }
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    })
+
+    await judgeGuesses({ ...mockRequest, isFinal: true })
+    const sentBody = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body)
+    expect(sentBody.isFinal).toBe(true)
+  })
+
+  it('does not include isFinal when not provided', async () => {
+    const mockResponse: JudgeResponse = { match: 'perfect', comment: 'Wow!' }
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    })
+
+    await judgeGuesses(mockRequest)
+    const sentBody = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body)
+    expect(sentBody.isFinal).toBeUndefined()
+  })
 })

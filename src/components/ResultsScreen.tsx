@@ -6,6 +6,7 @@ interface ResultsScreenProps {
   nicknameA: string
   nicknameB: string
   history: RoundRecord[]
+  finalComment: string | null
   onRestart: () => void
   onShare: () => void
 }
@@ -28,6 +29,7 @@ export function ResultsScreen({
   nicknameA,
   nicknameB,
   history,
+  finalComment,
   onRestart,
   onShare,
 }: ResultsScreenProps) {
@@ -35,9 +37,8 @@ export function ResultsScreen({
     (r) => r.match === 'perfect' || r.match === 'close'
   ).length
 
-  const lastComment = history.length > 0
-    ? history[history.length - 1].comment
-    : ''
+  const displayComment = finalComment
+    ?? (history.length > 0 ? history[history.length - 1].comment : '')
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col items-center p-6">
@@ -53,9 +54,9 @@ export function ResultsScreen({
         {score === 0 ? t().roundsMatched : t().roundStreak}
       </div>
 
-      {lastComment && (
+      {displayComment && (
         <div className="bg-gray-900 rounded-lg p-4 mb-6 w-full max-w-md">
-          <p className="text-gray-300 text-sm italic">{lastComment}</p>
+          <p className="text-gray-300 text-sm italic">{displayComment}</p>
         </div>
       )}
 
