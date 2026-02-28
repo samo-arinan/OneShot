@@ -50,6 +50,9 @@ How long can they keep matching?
   - **Guest waiting state**: Guest sees "Waiting for opponent..." on RoundResultScreen instead of non-functional "Next Round" button
   - **Game Over cleanup**: Removed "Player 1 & Player 2" subtitle, reduced history thumbnail size (48→32px)
   - **AbstractArt sizing fix**: Container div enforces `width`/`height` with `overflow: hidden`, CSS rule `.art-container svg { width: 100%; height: 100% }` scales AI-generated SVGs to fit
+- **v12: Share & save improvements**
+  - **Share text includes game URL**: `GAME_URL` constant appended to share message (`buildShareText` in `share.ts`)
+  - **SVG long-press save**: `AbstractArt` renders as `<img>` with `data:image/svg+xml` URI instead of `dangerouslySetInnerHTML` div — enables native mobile long-press to save/copy images
 
 ---
 
@@ -146,7 +149,8 @@ Round 5+: coherence 0.1 — near chaos (matching would be a miracle)
 
 ### Sharing
 - Twitter/X intent (text + site URL) + clipboard copy
-- Share text example: "Matched 5 rounds in a row on One Shot! #OneShot"
+- Share text includes game URL (`GAME_URL` constant in `share.ts`)
+- Share text example: "Matched 5 rounds in a row on One Shot! #OneShot\nhttps://one-shot-nine.vercel.app"
 
 ### AI Comments
 - Displayed only on the results screen
@@ -779,24 +783,35 @@ interface Props {
   params: VisualParams;
   width?: number;
   height?: number;
+  className?: string;
 }
 
-function AbstractArt({ params, width = 600, height = 400 }: Props) {
-  const scene = SCENE_REGISTRY.find(s => s.id === params.sceneId);
-  if (!scene) return null;
+function AbstractArt({ params, width = 600, height = 400, className = '' }: Props) {
+  const svgString = useMemo(() => {
+    if (params.svgContent) return params.svgContent;
+    const scene = SCENE_REGISTRY.find(s => s.id === params.sceneId);
+    if (!scene) return '';
+    const rng = seededRandom(params.seed);
+    return scene.render({ width, height, seed: params.seed, coherence: params.coherence, rng });
+  }, [params.svgContent, params.seed, params.coherence, params.sceneId, width, height]);
 
-  const rng = seededRandom(params.seed);
-  const svgString = scene.render({
-    width, height,
-    seed: params.seed,
-    coherence: params.coherence,
-    rng,
-  });
+  const dataUri = useMemo(() => {
+    if (!svgString) return '';
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+  }, [svgString]);
 
+  if (!dataUri) return null;
+
+  // <img> tag enables native mobile long-press save/copy
   return (
-    <div
-      className="abstract-art"
-      dangerouslySetInnerHTML={{ __html: svgString }}
+    <img
+      src={dataUri}
+      width={width}
+      height={height}
+      className={`art-container ${className}`}
+      style={{ width, height }}
+      alt="Abstract art"
+      draggable
     />
   );
 }

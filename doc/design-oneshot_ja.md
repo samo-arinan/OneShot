@@ -50,6 +50,9 @@
   - **ゲスト待機状態**: ラウンド結果画面でゲストには機能しない「次のラウンドへ」ボタンの代わりに「対戦相手を待っています...」メッセージを表示
   - **Game Over画面整理**: 「プレイヤー1 & プレイヤー2」サブタイトルを削除、履歴サムネイルサイズを縮小（48→32px）
   - **AbstractArtサイズ制約修正**: コンテナdivに `width`/`height` + `overflow: hidden` を適用、CSS `.art-container svg { width: 100%; height: 100% }` でAI生成SVGをコンテナにフィット
+- **v12: シェア＆保存改善**
+  - **シェアテキストにゲームURL追加**: `GAME_URL` 定数をシェアメッセージに付加（`share.ts` の `buildShareText`）
+  - **SVG長押し保存**: `AbstractArt` を `dangerouslySetInnerHTML` の div から `<img>` タグ + `data:image/svg+xml` URI に変更 — モバイルのネイティブ長押しで画像保存・コピーが可能に
 
 ---
 
@@ -146,7 +149,8 @@ Round 5+: coherence 0.1 — ほぼカオス（一致したら奇跡）
 
 ### シェア方法
 - Twitter/X intent（テキスト + サイトURL）+ クリップボードコピー
-- シェアテキスト例: 「One Shotで5ラウンド連続一致した！🎯 #OneShot」
+- シェアテキストにゲームURL（`share.ts` の `GAME_URL` 定数）を含む
+- シェアテキスト例: 「One Shotで5ラウンド連続一致した！ #OneShot\nhttps://one-shot-nine.vercel.app」
 
 ### AIコメント
 - 結果画面でのみ表示
@@ -772,24 +776,35 @@ interface Props {
   params: VisualParams;
   width?: number;
   height?: number;
+  className?: string;
 }
 
-function AbstractArt({ params, width = 600, height = 400 }: Props) {
-  const scene = SCENE_REGISTRY.find(s => s.id === params.sceneId);
-  if (!scene) return null;
+function AbstractArt({ params, width = 600, height = 400, className = '' }: Props) {
+  const svgString = useMemo(() => {
+    if (params.svgContent) return params.svgContent;
+    const scene = SCENE_REGISTRY.find(s => s.id === params.sceneId);
+    if (!scene) return '';
+    const rng = seededRandom(params.seed);
+    return scene.render({ width, height, seed: params.seed, coherence: params.coherence, rng });
+  }, [params.svgContent, params.seed, params.coherence, params.sceneId, width, height]);
 
-  const rng = seededRandom(params.seed);
-  const svgString = scene.render({
-    width, height,
-    seed: params.seed,
-    coherence: params.coherence,
-    rng,
-  });
+  const dataUri = useMemo(() => {
+    if (!svgString) return '';
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+  }, [svgString]);
 
+  if (!dataUri) return null;
+
+  // <img>タグでモバイルのネイティブ長押し保存・コピーを有効化
   return (
-    <div
-      className="abstract-art"
-      dangerouslySetInnerHTML={{ __html: svgString }}
+    <img
+      src={dataUri}
+      width={width}
+      height={height}
+      className={`art-container ${className}`}
+      style={{ width, height }}
+      alt="Abstract art"
+      draggable
     />
   );
 }
