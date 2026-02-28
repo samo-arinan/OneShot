@@ -1,0 +1,78 @@
+import type { MatchLevel, RoundRecord } from '../types'
+import { AbstractArt } from './AbstractArt'
+
+interface RoundResultScreenProps {
+  record: RoundRecord
+  nicknameA: string
+  nicknameB: string
+  isGameOver: boolean
+  onNext: () => void
+}
+
+const colorMap: Record<MatchLevel, string> = {
+  perfect: 'text-green-400',
+  close: 'text-yellow-400',
+  different: 'text-gray-400',
+  opposite: 'text-red-400',
+}
+
+const labelMap: Record<MatchLevel, string> = {
+  perfect: 'Perfect Match!',
+  close: 'Close!',
+  different: 'Different...',
+  opposite: 'Opposite!',
+}
+
+const emojiMap: Record<MatchLevel, string> = {
+  perfect: 'x',
+  close: '~',
+  different: '...',
+  opposite: '!?',
+}
+
+export function RoundResultScreen({
+  record,
+  nicknameA,
+  nicknameB,
+  isGameOver,
+  onNext,
+}: RoundResultScreenProps) {
+  return (
+    <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col items-center justify-center p-6">
+      <div className="text-sm text-gray-500 mb-2">Round {record.round}</div>
+
+      <div className={`text-3xl font-bold mb-4 ${colorMap[record.match]}`}>
+        {emojiMap[record.match]} {labelMap[record.match]}
+      </div>
+
+      <AbstractArt
+        params={record.params}
+        width={200}
+        height={200}
+        className="mb-4 opacity-60"
+      />
+
+      <div className="bg-gray-900 rounded-lg p-4 mb-4 w-full max-w-sm">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm text-gray-400">{nicknameA}</span>
+          <span className="text-gray-100">「{record.guessA}」</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-400">{nicknameB}</span>
+          <span className="text-gray-100">「{record.guessB}」</span>
+        </div>
+      </div>
+
+      <p className="text-gray-300 mb-8 text-center max-w-md italic text-sm">
+        {record.comment}
+      </p>
+
+      <button
+        onClick={onNext}
+        className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-lg font-medium transition-colors cursor-pointer"
+      >
+        {isGameOver ? '結果を見る' : '次のラウンドへ'}
+      </button>
+    </div>
+  )
+}
