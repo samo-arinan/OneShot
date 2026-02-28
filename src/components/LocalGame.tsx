@@ -28,7 +28,13 @@ function createInitialState(): GameState {
   }
 }
 
-export function LocalGame() {
+interface LocalGameProps {
+  roomCodeFromUrl?: string | null
+  onCreateRoom?: (nickname: string) => void
+  onJoinRoom?: (nickname: string) => void
+}
+
+export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGameProps = {}) {
   const [state, setState] = useState<GameState>(createInitialState)
 
   const startGame = useCallback((nicknameA: string, nicknameB: string) => {
@@ -141,7 +147,14 @@ export function LocalGame() {
 
   switch (state.phase) {
     case 'start':
-      return <StartScreen onStart={startGame} />
+      return (
+        <StartScreen
+          onStart={startGame}
+          onCreateRoom={onCreateRoom}
+          onJoinRoom={onJoinRoom}
+          roomCodeFromUrl={roomCodeFromUrl}
+        />
+      )
 
     case 'playing':
       return (

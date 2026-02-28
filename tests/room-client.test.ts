@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockSend = vi.fn()
 const mockClose = vi.fn()
-const listeners = new Map<string, Function>()
+const listeners = new Map<string, (...args: unknown[]) => unknown>()
 
 vi.mock('partysocket', () => {
   return {
@@ -21,7 +21,7 @@ vi.mock('partysocket', () => {
 
       send = mockSend
       close = mockClose
-      addEventListener(event: string, handler: Function) {
+      addEventListener(event: string, handler: (...args: unknown[]) => unknown) {
         listeners.set(event, handler)
       }
 

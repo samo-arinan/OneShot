@@ -22,7 +22,9 @@ export function useRoom({ roomCode, role, nickname, onMessage }: UseRoomOptions)
   const onMessageRef = useRef(onMessage)
   const [connected, setConnected] = useState(false)
 
-  onMessageRef.current = onMessage
+  useEffect(() => {
+    onMessageRef.current = onMessage
+  })
 
   useEffect(() => {
     const socket = new PartySocket({
