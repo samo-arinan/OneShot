@@ -1,4 +1,4 @@
-# One Shot — 設計書 v8
+# One Shot — 設計書 (latest)
 
 ## コンセプト
 
