@@ -98,6 +98,50 @@ describe('match labels', () => {
   })
 })
 
+describe('remote mode labels', () => {
+  it('returns English remote mode labels', () => {
+    setLocale('en')
+    expect(t().createRoom).toBe('Create Room')
+    expect(t().joinRoom).toBe('Join Room')
+    expect(t().roomCode).toBe('Room Code')
+    expect(t().copyLink).toBe('Copy link')
+    expect(t().linkCopied).toBe('Copied!')
+    expect(t().waitingForOpponent).toBe('Waiting for opponent...')
+    expect(t().startGame).toBe('Start Game')
+    expect(t().yourAnswer).toBe('Your answer')
+    expect(t().opponentAnswered).toBe('Opponent has answered')
+    expect(t().opponentDisconnected).toContain('disconnected')
+    expect(t().reconnecting).toContain('Reconnecting')
+    expect(t().enterNickname).toContain('nickname')
+  })
+
+  it('returns Japanese remote mode labels', () => {
+    setLocale('ja')
+    expect(t().createRoom).toContain('ルーム')
+    expect(t().joinRoom).toContain('参加')
+    expect(t().copyLink).toContain('コピー')
+    expect(t().waitingForOpponent).toContain('待')
+    expect(t().startGame).toContain('開始')
+    expect(t().yourAnswer).toContain('回答')
+    expect(t().opponentAnswered).toContain('回答')
+    expect(t().opponentDisconnected).toContain('切断')
+  })
+
+  it('remote interpolation functions work for en', () => {
+    setLocale('en')
+    expect(t().shareLink('https://example.com')).toContain('https://example.com')
+    expect(t().opponentJoined('Bob')).toContain('Bob')
+    expect(t().waitingForAnswer('Bob')).toContain('Bob')
+  })
+
+  it('remote interpolation functions work for ja', () => {
+    setLocale('ja')
+    expect(t().shareLink('https://example.com')).toContain('https://example.com')
+    expect(t().opponentJoined('ボブ')).toContain('ボブ')
+    expect(t().waitingForAnswer('ボブ')).toContain('ボブ')
+  })
+})
+
 describe('quote()', () => {
   it('wraps with Japanese brackets for ja', () => {
     setLocale('ja')

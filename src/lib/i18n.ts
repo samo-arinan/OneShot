@@ -26,6 +26,21 @@ export interface Messages {
   shareScore: (score: number) => string
   aiFallback: string
   quote: (text: string) => string
+  createRoom: string
+  joinRoom: string
+  roomCode: string
+  shareLink: (url: string) => string
+  copyLink: string
+  linkCopied: string
+  waitingForOpponent: string
+  opponentJoined: (name: string) => string
+  startGame: string
+  yourAnswer: string
+  waitingForAnswer: (name: string) => string
+  opponentAnswered: string
+  opponentDisconnected: string
+  reconnecting: string
+  enterNickname: string
 }
 
 const ja: Messages = {
@@ -54,6 +69,21 @@ const ja: Messages = {
   shareScore: (score) => `One Shotで${score}ラウンド連続一致した！ #OneShot`,
   aiFallback: 'AIが混乱しちゃった...',
   quote: (text) => `「${text}」`,
+  createRoom: 'ルームを作成',
+  joinRoom: 'ルームに参加',
+  roomCode: 'ルームコード',
+  shareLink: (url) => `このリンクをパートナーに共有: ${url}`,
+  copyLink: 'リンクをコピー',
+  linkCopied: 'コピーしました！',
+  waitingForOpponent: '相手を待っています...',
+  opponentJoined: (name) => `${name} が参加しました！`,
+  startGame: 'ゲーム開始',
+  yourAnswer: 'あなたの回答',
+  waitingForAnswer: (name) => `${name} の回答を待っています...`,
+  opponentAnswered: '相手が回答しました',
+  opponentDisconnected: '相手が切断しました。再接続を待っています...',
+  reconnecting: '再接続中...',
+  enterNickname: 'ニックネームを入力して参加',
 }
 
 const en: Messages = {
@@ -82,6 +112,21 @@ const en: Messages = {
   shareScore: (score) => `Matched ${score} rounds in a row on One Shot! #OneShot`,
   aiFallback: 'The AI got confused...',
   quote: (text) => `\u201C${text}\u201D`,
+  createRoom: 'Create Room',
+  joinRoom: 'Join Room',
+  roomCode: 'Room Code',
+  shareLink: (url) => `Share this link with your partner: ${url}`,
+  copyLink: 'Copy link',
+  linkCopied: 'Copied!',
+  waitingForOpponent: 'Waiting for opponent...',
+  opponentJoined: (name) => `${name} has joined!`,
+  startGame: 'Start Game',
+  yourAnswer: 'Your answer',
+  waitingForAnswer: (name) => `Waiting for ${name}...`,
+  opponentAnswered: 'Opponent has answered',
+  opponentDisconnected: 'Opponent disconnected. Waiting for reconnection...',
+  reconnecting: 'Reconnecting...',
+  enterNickname: 'Enter your nickname to join',
 }
 
 const messages: Record<Locale, Messages> = { en, ja }
