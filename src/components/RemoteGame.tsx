@@ -53,70 +53,74 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     revealedGuessB: null,
   })
 
+  const stateRef = useRef(state)
+  stateRef.current = state
   const sendRef = useRef<(msg: ClientMessage) => void>(() => {})
+  const judgingRef = useRef(false)
 
   const callJudge = useCallback(async (guessA: string, guessB: string) => {
-    setState((prev) => {
-      const round = prev.currentRound
-      const history = prev.history
-      const params = prev.currentParams
+    if (judgingRef.current) return
+    judgingRef.current = true
 
-      judgeGuesses({
-        round,
+    const { currentRound, history, currentParams } = stateRef.current
+
+    try {
+      const result = await judgeGuesses({
+        round: currentRound,
         nicknameA: t().player1Label,
         nicknameB: t().player2Label,
         guessA,
         guessB,
         history,
-      }).then(async (result) => {
-        const isGameOver = result.match === 'different' || result.match === 'opposite'
+      })
 
-        if (isGameOver) {
-          const fullHistory: RoundRecord[] = [...history, {
-            round,
-            params: params!,
+      const isGameOver = result.match === 'different' || result.match === 'opposite'
+
+      if (isGameOver) {
+        const fullHistory: RoundRecord[] = [...history, {
+          round: currentRound,
+          params: currentParams!,
+          guessA, guessB,
+          match: result.match,
+          comment: result.comment,
+        }]
+        try {
+          const finalResult = await judgeGuesses({
+            round: currentRound,
+            nicknameA: t().player1Label,
+            nicknameB: t().player2Label,
             guessA, guessB,
-            match: result.match,
-            comment: result.comment,
-          }]
-          try {
-            const finalResult = await judgeGuesses({
-              round,
-              nicknameA: t().player1Label,
-              nicknameB: t().player2Label,
-              guessA, guessB,
-              history: fullHistory,
-              isFinal: true,
-            })
-            sendRef.current({
-              type: 'judge_result',
-              result: {
-                match: result.match,
-                comment: result.comment,
-                finalComment: finalResult.comment,
-              },
-            })
-          } catch {
-            sendRef.current({
-              type: 'judge_result',
-              result: { match: result.match, comment: result.comment },
-            })
-          }
-        } else {
+            history: fullHistory,
+            isFinal: true,
+          })
+          sendRef.current({
+            type: 'judge_result',
+            result: {
+              match: result.match,
+              comment: result.comment,
+              finalComment: finalResult.comment,
+            },
+          })
+        } catch {
           sendRef.current({
             type: 'judge_result',
             result: { match: result.match, comment: result.comment },
           })
         }
-      }).catch(() => {
+      } else {
         sendRef.current({
           type: 'judge_result',
-          result: { match: 'different', comment: t().aiFallback },
+          result: { match: result.match, comment: result.comment },
         })
+      }
+    } catch {
+      sendRef.current({
+        type: 'judge_result',
+        result: { match: 'different', comment: t().aiFallback },
       })
-
-      return prev // no state change from setState
-    })
+    } finally {
+      judgingRef.current = false
+    }
   }, [])
 
   const handleMessage = useCallback((msg: ServerMessage) => {
@@ -252,12 +256,11 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
 
   const handleNextRound = useCallback(() => {
     if (role !== 'host') return
-    setState((prev) => {
-      const nextRoundNum = prev.currentRound + 1
-      const params = generateParams(nextRoundNum, prev.previousSceneIds, SCENE_REGISTRY)
-      send({ type: 'start_round', round: nextRoundNum, params })
-      return { ...prev, previousSceneIds: [...prev.previousSceneIds, params.sceneId] }
-    })
+    const { currentRound, previousSceneIds } = stateRef.current
+    const nextRoundNum = currentRound + 1
+    const params = generateParams(nextRoundNum, previousSceneIds, SCENE_REGISTRY)
+    setState((prev) => ({ ...prev, previousSceneIds: [...prev.previousSceneIds, params.sceneId] }))
+    send({ type: 'start_round', round: nextRoundNum, params })
   }, [role, send])
 
   const handleViewResults = useCallback(() => {
