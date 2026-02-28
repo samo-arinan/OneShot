@@ -4,6 +4,7 @@ import {
   createEmptyState,
   handleJoin,
   handleStartRound,
+  handleUpdateRoundArt,
   handleGuess,
   handleJudgeResult,
   handlePlayAgain,
@@ -76,6 +77,14 @@ export default class OneShotServer implements Party.Server {
         this.state = result.state
         this.guessA = null
         this.guessB = null
+        await this.saveState()
+        this.broadcastAll(result.messages)
+        break
+      }
+
+      case 'update_round_art': {
+        const result = handleUpdateRoundArt(this.state, role, msg.svgContent, msg.theme)
+        this.state = result.state
         await this.saveState()
         this.broadcastAll(result.messages)
         break

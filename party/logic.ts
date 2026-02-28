@@ -68,6 +68,29 @@ export function handleStartRound(
   }
 }
 
+export function handleUpdateRoundArt(
+  state: RoomSyncState,
+  role: 'host' | 'guest',
+  svgContent: string,
+  theme?: string,
+): HandleResult {
+  if (role !== 'host') {
+    return { state, messages: [{ type: 'error', message: 'Only host can update art' }] }
+  }
+  const next: RoomSyncState = {
+    ...state,
+    currentParams: {
+      ...state.currentParams!,
+      svgContent,
+      theme,
+    },
+  }
+  return {
+    state: next,
+    messages: [{ type: 'round_art_updated', svgContent, theme }],
+  }
+}
+
 export function handleGuess(
   state: RoomSyncState,
   role: 'host' | 'guest',

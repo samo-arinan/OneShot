@@ -6,6 +6,7 @@ import {
   handleGuess,
   handleJudgeResult,
   handlePlayAgain,
+  handleUpdateRoundArt,
 } from '../party/logic'
 import type { RoomSyncState } from '../party/protocol'
 
@@ -286,6 +287,57 @@ describe('handleJudgeResult', () => {
     expect(result.state.history).toHaveLength(2)
     expect(result.state.history[0].round).toBe(1)
     expect(result.state.history[1].round).toBe(2)
+  })
+})
+
+describe('handleUpdateRoundArt', () => {
+  const playingState: RoomSyncState = {
+    ...createEmptyState(),
+    phase: 'playing',
+    hasHost: true,
+    hasGuest: true,
+    currentRound: 1,
+    currentParams: { seed: 42, coherence: 0.9, sceneId: 'landscape_1' },
+  }
+
+  it('updates svgContent and theme in currentParams', () => {
+    const result = handleUpdateRoundArt(playingState, 'host', '<svg>art</svg>', 'sunset')
+    expect(result.state.currentParams!.svgContent).toBe('<svg>art</svg>')
+    expect(result.state.currentParams!.theme).toBe('sunset')
+  })
+
+  it('broadcasts round_art_updated message', () => {
+    const result = handleUpdateRoundArt(playingState, 'host', '<svg>art</svg>', 'sunset')
+    expect(result.messages).toHaveLength(1)
+    expect(result.messages[0]).toEqual({
+      type: 'round_art_updated',
+      svgContent: '<svg>art</svg>',
+      theme: 'sunset',
+    })
+  })
+
+  it('rejects update from guest', () => {
+    const result = handleUpdateRoundArt(playingState, 'guest', '<svg>art</svg>')
+    expect(result.state).toBe(playingState)
+    expect(result.messages[0].type).toBe('error')
+  })
+
+  it('works without theme', () => {
+    const result = handleUpdateRoundArt(playingState, 'host', '<svg>art</svg>')
+    expect(result.state.currentParams!.svgContent).toBe('<svg>art</svg>')
+    expect(result.state.currentParams!.theme).toBeUndefined()
+  })
+
+  it('does not mutate original state', () => {
+    handleUpdateRoundArt(playingState, 'host', '<svg>art</svg>', 'sunset')
+    expect(playingState.currentParams!.svgContent).toBeUndefined()
+  })
+
+  it('preserves other fields in currentParams', () => {
+    const result = handleUpdateRoundArt(playingState, 'host', '<svg>art</svg>', 'sunset')
+    expect(result.state.currentParams!.seed).toBe(42)
+    expect(result.state.currentParams!.coherence).toBe(0.9)
+    expect(result.state.currentParams!.sceneId).toBe('landscape_1')
   })
 })
 

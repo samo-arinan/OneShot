@@ -10,6 +10,7 @@ import { generateRound } from '../lib/svg-generator'
 import { generateParams } from '../lib/scene-selector'
 import { SCENE_REGISTRY } from '../scenes/registry'
 import { buildShareText, shareToTwitter } from '../lib/share'
+import { seededRandom } from '../lib/seeded-random'
 import { t } from '../lib/i18n'
 import { convertRoundToSvg, startPrefetch } from '../lib/art-prefetch'
 import type { PrefetchedRound } from '../lib/art-prefetch'
@@ -32,7 +33,6 @@ interface RemoteState {
   opponentDisconnected: boolean
   revealedGuessA: string | null
   revealedGuessB: string | null
-  isGeneratingArt: boolean
 }
 
 interface RemoteGameProps {
@@ -55,13 +55,13 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     opponentDisconnected: false,
     revealedGuessA: null,
     revealedGuessB: null,
-    isGeneratingArt: false,
   })
 
   const stateRef = useRef(state)
   stateRef.current = state
   const sendRef = useRef<(msg: ClientMessage) => void>(() => {})
   const judgingRef = useRef(false)
+  const startingRef = useRef(false)
   const prefetchRef = useRef<PrefetchedRound | null>(null)
   const previousThemesRef = useRef<string[]>([])
 
@@ -177,6 +177,15 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
         }))
         break
 
+      case 'round_art_updated':
+        setState((prev) => ({
+          ...prev,
+          currentParams: prev.currentParams
+            ? { ...prev.currentParams, svgContent: msg.svgContent, theme: msg.theme }
+            : prev.currentParams,
+        }))
+        break
+
       case 'guess_received': {
         const isMyGuess = (role === 'host' && msg.from === 'A') || (role === 'guest' && msg.from === 'B')
         if (!isMyGuess) {
@@ -250,7 +259,19 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     [state.history]
   )
 
+  const sendFallbackArt = useCallback((params: VisualParams) => {
+    const scene = SCENE_REGISTRY.find(s => s.id === params.sceneId)
+    if (scene) {
+      const rng = seededRandom(params.seed)
+      const svg = scene.render({ width: 360, height: 360, seed: params.seed, coherence: params.coherence, rng })
+      send({ type: 'update_round_art', svgContent: svg })
+    }
+  }, [send])
+
   const handleStartGame = useCallback(async () => {
+    if (startingRef.current) return
+    startingRef.current = true
+
     prefetchRef.current = null
     previousThemesRef.current = []
 
@@ -258,9 +279,11 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
 
     setState((prev) => ({ ...prev, previousSceneIds: [fallbackParams.sceneId] }))
 
-    const params: VisualParams = { ...fallbackParams }
+    // Send start_round immediately so both players enter game screen
+    send({ type: 'start_round', round: 1, params: fallbackParams })
 
-    setState((prev) => ({ ...prev, isGeneratingArt: true }))
+    // Generate AI art in background, then update both players
+    let artSent = false
     try {
       const response = await generateRound({
         mode: 'script',
@@ -269,21 +292,20 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
       })
       const svg = convertRoundToSvg(response.content, response.fallback, 'script')
       if (svg) {
-        params.svgContent = svg
-        params.theme = response.theme
         if (response.theme) previousThemesRef.current.push(response.theme)
+        send({ type: 'update_round_art', svgContent: svg, theme: response.theme })
+        artSent = true
       }
     } catch {
-      // Fallback to classic scene silently
-    } finally {
-      setState((prev) => ({ ...prev, isGeneratingArt: false }))
+      // Fall through to fallback below
+    }
+    if (!artSent) {
+      sendFallbackArt(fallbackParams)
     }
 
     // Start prefetching round 2
     prefetchRef.current = startPrefetch(2, 'ai-script', previousThemesRef.current)
-
-    send({ type: 'start_round', round: 1, params })
-  }, [send])
+  }, [send, sendFallbackArt])
 
   const handleSubmitGuess = useCallback((guess: string) => {
     setState((prev) => ({ ...prev, myGuessSubmitted: true }))
@@ -299,28 +321,35 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     const prefetched = prefetchRef.current
     prefetchRef.current = null
 
-    let params: VisualParams
-
     if (prefetched) {
       if (prefetched.promise) {
-        // Prefetch still in progress — show loading and wait
-        setState((prev) => ({ ...prev, isGeneratingArt: true }))
+        // Prefetch still in progress — send fallback now, update when ready
+        send({ type: 'start_round', round: nextRoundNum, params: prefetched.params })
+
         await prefetched.promise
-        setState((prev) => ({ ...prev, isGeneratingArt: false }))
-      }
 
-      params = {
-        ...prefetched.params,
-        svgContent: prefetched.svgContent ?? undefined,
-        theme: prefetched.theme,
+        if (prefetched.svgContent) {
+          if (prefetched.theme) previousThemesRef.current.push(prefetched.theme)
+          send({ type: 'update_round_art', svgContent: prefetched.svgContent, theme: prefetched.theme })
+        } else {
+          sendFallbackArt(prefetched.params)
+        }
+      } else {
+        // Prefetch already resolved
+        const params: VisualParams = {
+          ...prefetched.params,
+          svgContent: prefetched.svgContent ?? undefined,
+          theme: prefetched.theme,
+        }
+        if (prefetched.theme) previousThemesRef.current.push(prefetched.theme)
+        send({ type: 'start_round', round: nextRoundNum, params })
       }
-      if (prefetched.theme) previousThemesRef.current.push(prefetched.theme)
     } else {
-      // No prefetch available — generate on demand
+      // No prefetch available — send fallback immediately, generate in background
       const fallbackParams = generateParams(nextRoundNum, previousSceneIds, SCENE_REGISTRY)
-      params = { ...fallbackParams }
+      send({ type: 'start_round', round: nextRoundNum, params: fallbackParams })
 
-      setState((prev) => ({ ...prev, isGeneratingArt: true }))
+      let artSent = false
       try {
         const response = await generateRound({
           mode: 'script',
@@ -329,22 +358,21 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
         })
         const svg = convertRoundToSvg(response.content, response.fallback, 'script')
         if (svg) {
-          params.svgContent = svg
-          params.theme = response.theme
           if (response.theme) previousThemesRef.current.push(response.theme)
+          send({ type: 'update_round_art', svgContent: svg, theme: response.theme })
+          artSent = true
         }
       } catch {
-        // Fallback to classic scene silently
-      } finally {
-        setState((prev) => ({ ...prev, isGeneratingArt: false }))
+        // Fall through to fallback below
+      }
+      if (!artSent) {
+        sendFallbackArt(fallbackParams)
       }
     }
 
-    send({ type: 'start_round', round: nextRoundNum, params })
-
     // Start prefetching next round
     prefetchRef.current = startPrefetch(nextRoundNum + 1, 'ai-script', previousThemesRef.current)
-  }, [role, send])
+  }, [role, send, sendFallbackArt])
 
   const handleViewResults = useCallback(() => {
     setState((prev) => ({ ...prev, phase: 'gameOver' }))
@@ -353,6 +381,7 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
   const handleRestart = useCallback(() => {
     prefetchRef.current = null
     previousThemesRef.current = []
+    startingRef.current = false
     send({ type: 'play_again' })
   }, [send])
 
@@ -411,7 +440,7 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
           myRole={role}
           matchCount={matchCount}
           isJudging={state.phase === 'judging'}
-          isGeneratingArt={state.isGeneratingArt}
+          isGeneratingArt={!state.currentParams?.svgContent}
           myGuessSubmitted={state.myGuessSubmitted}
           opponentGuessSubmitted={state.opponentGuessSubmitted}
           onSubmitGuess={handleSubmitGuess}
@@ -429,6 +458,7 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
           record={lastRecord}
           isGameOver={isGameOver}
           onNext={isGameOver ? handleViewResults : handleNextRound}
+          isWaiting={!isGameOver && role === 'guest'}
         />
       )
     }

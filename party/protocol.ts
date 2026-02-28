@@ -41,6 +41,7 @@ export interface RoomSyncState {
 export type ClientMessage =
   | { type: 'join'; role: 'host' | 'guest' }
   | { type: 'start_round'; round: number; params: VisualParamsWire }
+  | { type: 'update_round_art'; svgContent: string; theme?: string }
   | { type: 'submit_guess'; guess: string }
   | { type: 'judge_result'; result: JudgeResultPayload }
   | { type: 'play_again' }
@@ -60,6 +61,7 @@ export type ServerMessage =
   | { type: 'guess_received'; from: 'A' | 'B' }
   | { type: 'both_guessed'; guessA: string; guessB: string }
   | { type: 'round_result'; record: RoundRecordWire }
+  | { type: 'round_art_updated'; svgContent: string; theme?: string }
   | { type: 'game_over'; history: RoundRecordWire[]; finalComment: string | null }
   | { type: 'opponent_disconnected' }
   | { type: 'opponent_reconnected' }

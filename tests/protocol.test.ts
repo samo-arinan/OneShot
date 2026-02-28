@@ -163,6 +163,36 @@ describe('protocol types', () => {
     }
   })
 
+  it('ClientMessage update_round_art serializes correctly', () => {
+    const msg: ClientMessage = {
+      type: 'update_round_art',
+      svgContent: '<svg>test</svg>',
+      theme: 'sunset',
+    }
+    const json = JSON.stringify(msg)
+    const parsed: ClientMessage = JSON.parse(json)
+    expect(parsed.type).toBe('update_round_art')
+    if (parsed.type === 'update_round_art') {
+      expect(parsed.svgContent).toBe('<svg>test</svg>')
+      expect(parsed.theme).toBe('sunset')
+    }
+  })
+
+  it('ServerMessage round_art_updated serializes correctly', () => {
+    const msg: ServerMessage = {
+      type: 'round_art_updated',
+      svgContent: '<svg>test</svg>',
+      theme: 'sunset',
+    }
+    const json = JSON.stringify(msg)
+    const parsed: ServerMessage = JSON.parse(json)
+    expect(parsed.type).toBe('round_art_updated')
+    if (parsed.type === 'round_art_updated') {
+      expect(parsed.svgContent).toBe('<svg>test</svg>')
+      expect(parsed.theme).toBe('sunset')
+    }
+  })
+
   it('ServerMessage game_over serializes correctly', () => {
     const msg: ServerMessage = {
       type: 'game_over',
