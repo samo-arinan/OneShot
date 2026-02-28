@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useRoom } from '../lib/room'
 import { WaitingScreen } from './WaitingScreen'
 import { RoomLobby } from './RoomLobby'
