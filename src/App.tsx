@@ -7,6 +7,7 @@ import { judgeGuesses } from './lib/api'
 import { generateParams } from './lib/scene-selector'
 import { SCENE_REGISTRY } from './scenes/registry'
 import { buildShareText, shareToTwitter } from './lib/share'
+import { t } from './lib/i18n'
 import type { GameState, RoundRecord } from './types'
 
 function createInitialState(): GameState {
@@ -73,7 +74,7 @@ export default function App() {
       setState((prev) => ({
         ...prev,
         isJudging: false,
-        error: '判定に失敗しました。もう一度お試しください。',
+        error: t().judgeFailed,
       }))
     }
   }, [state.currentRound, state.nicknameA, state.nicknameB, state.currentParams, state.history])

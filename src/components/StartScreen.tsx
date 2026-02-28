@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { t } from '../lib/i18n'
 
 interface StartScreenProps {
   onStart: (nicknameA: string, nicknameB: string) => void
@@ -21,14 +22,14 @@ export function StartScreen({ onStart }: StartScreenProps) {
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col items-center justify-center p-6">
       <h1 className="text-5xl font-bold mb-2 tracking-tight">ONE SHOT</h1>
       <p className="text-gray-400 mb-10 text-center">
-        同じものが、見えるか。
+        {t().tagline}
       </p>
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
         <div>
           <label className="block text-sm text-gray-400 mb-1">Player 1</label>
           <input
             type="text"
-            placeholder="ニックネーム"
+            placeholder={t().nickname}
             value={nameA}
             onChange={(e) => setNameA(e.target.value)}
             className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
@@ -40,7 +41,7 @@ export function StartScreen({ onStart }: StartScreenProps) {
           <label className="block text-sm text-gray-400 mb-1">Player 2</label>
           <input
             type="text"
-            placeholder="ニックネーム"
+            placeholder={t().nickname}
             value={nameB}
             onChange={(e) => setNameB(e.target.value)}
             className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"

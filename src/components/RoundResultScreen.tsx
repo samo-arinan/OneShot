@@ -1,5 +1,6 @@
 import type { MatchLevel, RoundRecord } from '../types'
 import { AbstractArt } from './AbstractArt'
+import { t } from '../lib/i18n'
 
 interface RoundResultScreenProps {
   record: RoundRecord
@@ -55,11 +56,11 @@ export function RoundResultScreen({
       <div className="bg-gray-900 rounded-lg p-4 mb-4 w-full max-w-sm">
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm text-gray-400">{nicknameA}</span>
-          <span className="text-gray-100">「{record.guessA}」</span>
+          <span className="text-gray-100">{t().quote(record.guessA)}</span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-400">{nicknameB}</span>
-          <span className="text-gray-100">「{record.guessB}」</span>
+          <span className="text-gray-100">{t().quote(record.guessB)}</span>
         </div>
       </div>
 
@@ -71,7 +72,7 @@ export function RoundResultScreen({
         onClick={onNext}
         className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-lg font-medium transition-colors cursor-pointer"
       >
-        {isGameOver ? '結果を見る' : '次のラウンドへ'}
+        {isGameOver ? t().viewResults : t().nextRound}
       </button>
     </div>
   )

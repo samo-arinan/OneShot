@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AbstractArt } from './AbstractArt'
+import { t } from '../lib/i18n'
 import type { VisualParams } from '../types'
 
 type InputPhase = 'viewing' | 'playerA' | 'playerB' | 'confirm'
@@ -67,12 +68,12 @@ export function GameScreen({
       <div className="w-full max-w-sm">
         {phase === 'viewing' && (
           <div className="text-center">
-            <p className="text-gray-400 mb-4">これ、何に見える？</p>
+            <p className="text-gray-400 mb-4">{t().whatDoYouSee}</p>
             <button
               onClick={handleNextPhase}
               className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-medium transition-colors cursor-pointer"
             >
-              {nicknameA} から回答
+              {t().answerFrom(nicknameA)}
             </button>
           </div>
         )}
@@ -80,14 +81,14 @@ export function GameScreen({
         {phase === 'playerA' && (
           <div>
             <label className="block text-sm text-gray-400 mb-2">
-              {nicknameA}、何に見える？
+              {t().nameWhatDoYouSee(nicknameA)}
             </label>
             <p className="text-xs text-gray-600 mb-2">
-              {nicknameB} は見ないでね
+              {t().dontLook(nicknameB)}
             </p>
             <input
               type="text"
-              placeholder="何に見える？"
+              placeholder={t().whatDoYouSee}
               value={guessA}
               onChange={(e) => setGuessA(e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, handleNextPhase)}
@@ -108,14 +109,14 @@ export function GameScreen({
         {phase === 'playerB' && (
           <div>
             <label className="block text-sm text-gray-400 mb-2">
-              {nicknameB}、何に見える？
+              {t().nameWhatDoYouSee(nicknameB)}
             </label>
             <p className="text-xs text-gray-600 mb-2">
-              {nicknameA} は見ないでね
+              {t().dontLook(nicknameA)}
             </p>
             <input
               type="text"
-              placeholder="何に見える？"
+              placeholder={t().whatDoYouSee}
               value={guessB}
               onChange={(e) => setGuessB(e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, handleNextPhase)}
@@ -137,23 +138,23 @@ export function GameScreen({
           <div className="text-center">
             <div className="bg-gray-900 rounded-lg p-4 mb-4 space-y-2">
               <div className="text-sm text-gray-400">{nicknameA}</div>
-              <div className="text-lg">「{guessA}」</div>
+              <div className="text-lg">{t().quote(guessA)}</div>
               <div className="border-t border-gray-800 my-2" />
               <div className="text-sm text-gray-400">{nicknameB}</div>
-              <div className="text-lg">「{guessB}」</div>
+              <div className="text-lg">{t().quote(guessB)}</div>
             </div>
             <button
               onClick={handleSubmit}
               className="w-full bg-amber-600 hover:bg-amber-500 text-white py-3 rounded-lg font-medium transition-colors cursor-pointer"
             >
-              答え合わせ！
+              {t().checkAnswers}
             </button>
           </div>
         )}
 
         {isJudging && (
           <div className="text-center">
-            <div className="text-gray-400 animate-pulse text-lg">判定中...</div>
+            <div className="text-gray-400 animate-pulse text-lg">{t().judging}</div>
           </div>
         )}
       </div>

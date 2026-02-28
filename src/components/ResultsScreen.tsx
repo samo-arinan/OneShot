@@ -1,5 +1,6 @@
 import type { MatchLevel, RoundRecord } from '../types'
 import { AbstractArt } from './AbstractArt'
+import { t } from '../lib/i18n'
 
 interface ResultsScreenProps {
   nicknameA: string
@@ -49,7 +50,7 @@ export function ResultsScreen({
         {score}
       </div>
       <div className="text-gray-500 text-sm mb-6">
-        {score === 0 ? 'ラウンド一致' : 'ラウンド連続一致'}
+        {score === 0 ? t().roundsMatched : t().roundStreak}
       </div>
 
       {lastComment && (
@@ -77,10 +78,10 @@ export function ResultsScreen({
                   <span className="text-xs">{matchIcon[r.match]}</span>
                 </div>
                 <div className="text-sm truncate">
-                  {nicknameA}: 「{r.guessA}」
+                  {nicknameA}: {t().quote(r.guessA)}
                 </div>
                 <div className="text-sm truncate">
-                  {nicknameB}: 「{r.guessB}」
+                  {nicknameB}: {t().quote(r.guessB)}
                 </div>
               </div>
             </div>
@@ -93,13 +94,13 @@ export function ResultsScreen({
           onClick={onRestart}
           className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-100 py-3 rounded-lg font-medium transition-colors cursor-pointer"
         >
-          もう一回
+          {t().playAgain}
         </button>
         <button
           onClick={onShare}
           className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-medium transition-colors cursor-pointer"
         >
-          シェア
+          {t().share}
         </button>
       </div>
     </div>
