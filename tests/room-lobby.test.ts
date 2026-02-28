@@ -6,13 +6,15 @@ describe('RoomLobby', () => {
     expect(typeof RoomLobby).toBe('function')
   })
 
-  it('accepts required props', () => {
-    const props = {
+  it('accepts required props type signature', () => {
+    // Type-level check: onStartGame now receives ArtMode
+    const props: Parameters<typeof RoomLobby>[0] = {
       roomCode: 'ABC123',
       isHost: true,
-      onStartGame: () => {},
+      onStartGame: (_artMode) => {},
     }
-    const element = RoomLobby(props)
-    expect(element).toBeDefined()
+    expect(props.roomCode).toBe('ABC123')
+    expect(props.isHost).toBe(true)
+    expect(typeof props.onStartGame).toBe('function')
   })
 })

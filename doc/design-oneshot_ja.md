@@ -26,6 +26,16 @@
   - モチーフ＋パレットの分離を廃止 → 「シーン」として統合
   - シーン定義をリッチ化（特にRound 1で「何かに見える」を保証）
   - シーン数を大幅増（40-50種）
+- **v9: AI Artモード — Mistral APIによるSVGアート生成**
+  - 新エンドポイント `POST /api/generate-svg`（`mistral-large-latest` 使用）
+  - StartScreenにアートモード切り替え: "Classic"（48手書きシーン）vs "AI Script" / "AI Scene"（Mistral生成）
+  - 2つのAIモード: Script（JSコード→SVG）とJSON（シーン記述→SVG）
+  - プロンプトベースのcoherence制御（抽象度をプロンプトで指示）
+  - SVGバリデーション＆サニタイズ（dangerouslySetInnerHTML経由のXSS防止）
+  - API障害時は自動的にClassicシーンにフォールバック
+  - リモートモード: ホストがSVGを生成しPartyKit WebSocket経由で配布
+  - LLMによるテーマ自由選択（固定テーマリスト廃止）、`previousThemes`で重複回避
+  - ラウンド単位生成＋バックグラウンド先読み（ラウンドN中にN+1を生成）
 
 ---
 
@@ -298,6 +308,41 @@ Player 2「{nicknameB}」の回答: {guessB}
 
 {isFinal ? "これがゲーム終了のラウンドです。全体の振り返りコメントをお願いします。" : ""}
 ```
+
+### `POST /api/generate-svg`
+
+Mistral APIを使って1ラウンド分の抽象SVGアートワークを生成する。「AI Art」モードで使用。
+LLMが毎回自由にテーマを選択し、`previousThemes`で重複を回避する。
+
+```
+Request:
+{
+  mode: "script" | "json",     // script = JSコード, json = シーン記述
+  coherence: number,            // 0.0-1.0、抽象度を制御
+  previousThemes?: string[],    // 使用済みテーマ（回避用）
+  lang?: "en" | "ja"
+}
+
+Response:
+{
+  content: string,     // JSコードまたはJSONシーン（フォールバック時は空文字列）
+  fallback: boolean,   // 生成失敗時true、クライアントはClassicシーンを使用
+  theme?: string       // LLMが選んだテーマラベル（2〜5語）
+}
+```
+
+- モデル: `mistral-large-latest`
+- Temperature: 0.9（高い創造性）
+- max_tokens: 2048（1ラウンドのみ）
+- SVG制約: viewBox 0 0 360 360、テキスト/script/イベントハンドラ禁止
+- Coherenceマッピング:
+  - 0.8+: はっきりと認識できるシーン
+  - 0.6-0.8: やや抽象的、スタイライズ
+  - 0.4-0.6: 曖昧、複数の解釈可能
+  - 0.2-0.4: 高度に抽象的、断片的
+  - <0.2: カオスな視覚ノイズ
+- セキュリティ: SVGバリデーションで`<script>`、`on*`属性、`javascript:` URIを拒否
+- バックグラウンド先読み: ラウンドN中にN+1を事前生成
 
 ---
 

@@ -37,6 +37,11 @@ export interface Messages {
   reconnecting: string
   youSuffix: string
   submitted: string
+  generatingArt: string
+  artModeClassic: string
+  artModeScript: string
+  artModeJson: string
+  aiArtUnavailable: string
 }
 
 const ja: Messages = {
@@ -76,6 +81,11 @@ const ja: Messages = {
   reconnecting: '再接続中...',
   youSuffix: '(あなた)',
   submitted: '回答済み',
+  generatingArt: 'アート生成中...',
+  artModeClassic: 'Classic',
+  artModeScript: 'AI Script',
+  artModeJson: 'AI Scene',
+  aiArtUnavailable: 'AI Art が利用できませんでした。Classic モードで表示しています。',
 }
 
 const en: Messages = {
@@ -115,6 +125,11 @@ const en: Messages = {
   reconnecting: 'Reconnecting...',
   youSuffix: '(You)',
   submitted: 'Submitted',
+  generatingArt: 'Generating artwork...',
+  artModeClassic: 'Classic',
+  artModeScript: 'AI Script',
+  artModeJson: 'AI Scene',
+  aiArtUnavailable: 'AI Art unavailable. Showing classic artwork.',
 }
 
 const messages: Record<Locale, Messages> = { en, ja }

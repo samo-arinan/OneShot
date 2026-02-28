@@ -12,6 +12,7 @@ interface Props {
 
 export function AbstractArt({ params, width = 600, height = 400, className = '' }: Props) {
   const svgString = useMemo(() => {
+    if (params.svgContent) return params.svgContent
     const scene = SCENE_REGISTRY.find(s => s.id === params.sceneId)
     if (!scene) return ''
     const rng = seededRandom(params.seed)
@@ -22,7 +23,7 @@ export function AbstractArt({ params, width = 600, height = 400, className = '' 
       coherence: params.coherence,
       rng,
     })
-  }, [params.seed, params.coherence, params.sceneId, width, height])
+  }, [params.svgContent, params.seed, params.coherence, params.sceneId, width, height])
 
   if (!svgString) return null
 

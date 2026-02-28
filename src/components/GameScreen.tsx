@@ -8,6 +8,7 @@ interface GameScreenProps {
   params: VisualParams
   matchCount: number
   isJudging: boolean
+  isGeneratingArt?: boolean
   onSubmit: (guessA: string, guessB: string) => void
 }
 
@@ -16,6 +17,7 @@ export function GameScreen({
   params,
   matchCount,
   isJudging,
+  isGeneratingArt = false,
   onSubmit,
 }: GameScreenProps) {
   const [guessA, setGuessA] = useState('')
@@ -43,12 +45,18 @@ export function GameScreen({
         )}
       </div>
 
-      <AbstractArt
-        params={params}
-        width={360}
-        height={360}
-        className="mb-6 max-w-full"
-      />
+      {isGeneratingArt ? (
+        <div className="mb-6 w-[360px] h-[360px] max-w-full flex items-center justify-center bg-gray-900 rounded-lg">
+          <div className="text-gray-400 animate-pulse">{t().generatingArt}</div>
+        </div>
+      ) : (
+        <AbstractArt
+          params={params}
+          width={360}
+          height={360}
+          className="mb-6 max-w-full"
+        />
+      )}
 
       <div className="w-full max-w-sm">
         {isJudging ? (

@@ -26,6 +26,16 @@ How long can they keep matching?
   - Removed motif + palette separation → unified as "scenes"
   - Enriched scene definitions (ensuring Round 1 images "look like something")
   - Expanded scene count significantly (40-50 types)
+- **v9: AI Art mode — Mistral API generates SVG artwork**
+  - New `POST /api/generate-svg` endpoint using `mistral-large-latest`
+  - Art mode toggle on StartScreen: "Classic" (48 hardcoded scenes) vs "AI Script" / "AI Scene" (Mistral-generated)
+  - Two AI modes: Script (JS code → SVG) and JSON (scene description → SVG)
+  - Prompt-based coherence control (abstraction level encoded in prompt)
+  - SVG validation & sanitization (XSS prevention for dangerouslySetInnerHTML)
+  - Automatic fallback to classic scenes on API failure
+  - Remote mode: host generates SVG and distributes via PartyKit WebSocket
+  - Free theme selection by LLM (no fixed theme list), with `previousThemes` deduplication
+  - Per-round generation with background prefetching (round N+1 generated while playing round N)
 
 ---
 
@@ -305,6 +315,41 @@ History so far:
 
 {isFinal ? "This is the game-ending round. Please provide a retrospective summary comment." : ""}
 ```
+
+### `POST /api/generate-svg`
+
+Generates one abstract SVG artwork per call using the Mistral API. Used in "AI Art" mode.
+The LLM freely chooses a theme each round; `previousThemes` prevents repetition.
+
+```
+Request:
+{
+  mode: "script" | "json",     // script = JS code, json = scene description
+  coherence: number,            // 0.0-1.0, controls abstraction level
+  previousThemes?: string[],    // themes to avoid (already used)
+  lang?: "en" | "ja"
+}
+
+Response:
+{
+  content: string,     // JS code or JSON scene (empty if fallback)
+  fallback: boolean,   // true if generation failed, client should use classic scene
+  theme?: string       // LLM-chosen theme label (2-5 words)
+}
+```
+
+- Model: `mistral-large-latest`
+- Temperature: 0.9 (high creativity)
+- max_tokens: 2048 (single round)
+- SVG constraints: viewBox 0 0 360 360, no text/script/event handlers
+- Coherence mapping:
+  - 0.8+: clearly recognizable scene
+  - 0.6-0.8: somewhat abstract, stylized
+  - 0.4-0.6: ambiguous, multiple interpretations
+  - 0.2-0.4: highly abstract, fragmented
+  - <0.2: chaotic visual noise
+- Security: SVG validation rejects `<script>`, `on*` attributes, `javascript:` URIs
+- Background prefetching: round N+1 is generated while the player is on round N
 
 ---
 
