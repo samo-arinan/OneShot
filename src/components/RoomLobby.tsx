@@ -1,11 +1,9 @@
-import { useState } from 'react'
 import { t } from '../lib/i18n'
-import type { ArtMode } from '../types'
 
 interface RoomLobbyProps {
   roomCode: string
   isHost: boolean
-  onStartGame: (artMode: ArtMode) => void
+  onStartGame: () => void
 }
 
 export function RoomLobby({
@@ -13,8 +11,6 @@ export function RoomLobby({
   isHost,
   onStartGame,
 }: RoomLobbyProps) {
-  const [artMode, setArtMode] = useState<ArtMode>('classic')
-
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col items-center justify-center p-6">
       <div className="text-sm text-gray-500 mb-2">{t().roomCode}: {roomCode}</div>
@@ -34,27 +30,8 @@ export function RoomLobby({
 
       {isHost ? (
         <div className="w-full max-w-sm space-y-4">
-          <div className="flex rounded-lg overflow-hidden border border-gray-700">
-            {([
-              ['classic', t().artModeClassic, 'bg-gray-700'],
-              ['ai-script', t().artModeScript, 'bg-blue-600'],
-              ['ai-json', t().artModeJson, 'bg-purple-600'],
-            ] as const).map(([mode, label, activeBg]) => (
-              <button
-                key={mode}
-                onClick={() => setArtMode(mode as ArtMode)}
-                className={`flex-1 py-2 text-sm font-medium transition-colors cursor-pointer ${
-                  artMode === mode
-                    ? `${activeBg} text-white`
-                    : 'bg-gray-900 text-gray-400 hover:text-gray-200'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
           <button
-            onClick={() => onStartGame(artMode)}
+            onClick={onStartGame}
             className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-medium transition-colors cursor-pointer"
           >
             {t().startGame}

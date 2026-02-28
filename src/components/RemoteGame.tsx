@@ -15,7 +15,7 @@ import { convertRoundToSvg, startPrefetch } from '../lib/art-prefetch'
 import type { PrefetchedRound } from '../lib/art-prefetch'
 import type { ServerMessage } from '../../party/protocol'
 import type { ClientMessage } from '../../party/protocol'
-import type { ArtMode, VisualParams, RoundRecord } from '../types'
+import type { VisualParams, RoundRecord } from '../types'
 
 type RemotePhase = 'waiting' | 'lobby' | 'playing' | 'judging' | 'roundResult' | 'gameOver'
 
@@ -32,7 +32,6 @@ interface RemoteState {
   opponentDisconnected: boolean
   revealedGuessA: string | null
   revealedGuessB: string | null
-  artMode: ArtMode
   isGeneratingArt: boolean
 }
 
@@ -56,7 +55,6 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     opponentDisconnected: false,
     revealedGuessA: null,
     revealedGuessB: null,
-    artMode: 'classic',
     isGeneratingArt: false,
   })
 
@@ -252,40 +250,37 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     [state.history]
   )
 
-  const handleStartGame = useCallback(async (artMode: ArtMode) => {
+  const handleStartGame = useCallback(async () => {
     prefetchRef.current = null
     previousThemesRef.current = []
 
     const fallbackParams = generateParams(1, [], SCENE_REGISTRY)
 
-    setState((prev) => ({ ...prev, previousSceneIds: [fallbackParams.sceneId], artMode }))
+    setState((prev) => ({ ...prev, previousSceneIds: [fallbackParams.sceneId] }))
 
     const params: VisualParams = { ...fallbackParams }
 
-    if (artMode !== 'classic') {
-      setState((prev) => ({ ...prev, isGeneratingArt: true }))
-      const mode = artMode === 'ai-script' ? 'script' as const : 'json' as const
-      try {
-        const response = await generateRound({
-          mode,
-          coherence: fallbackParams.coherence,
-          previousThemes: [],
-        })
-        const svg = convertRoundToSvg(response.content, response.fallback, mode)
-        if (svg) {
-          params.svgContent = svg
-          params.theme = response.theme
-          if (response.theme) previousThemesRef.current.push(response.theme)
-        }
-      } catch {
-        // Fallback to classic scene silently
-      } finally {
-        setState((prev) => ({ ...prev, isGeneratingArt: false }))
+    setState((prev) => ({ ...prev, isGeneratingArt: true }))
+    try {
+      const response = await generateRound({
+        mode: 'script',
+        coherence: fallbackParams.coherence,
+        previousThemes: [],
+      })
+      const svg = convertRoundToSvg(response.content, response.fallback, 'script')
+      if (svg) {
+        params.svgContent = svg
+        params.theme = response.theme
+        if (response.theme) previousThemesRef.current.push(response.theme)
       }
-
-      // Start prefetching round 2
-      prefetchRef.current = startPrefetch(2, artMode, previousThemesRef.current)
+    } catch {
+      // Fallback to classic scene silently
+    } finally {
+      setState((prev) => ({ ...prev, isGeneratingArt: false }))
     }
+
+    // Start prefetching round 2
+    prefetchRef.current = startPrefetch(2, 'ai-script', previousThemesRef.current)
 
     send({ type: 'start_round', round: 1, params })
   }, [send])
@@ -297,17 +292,10 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
 
   const handleNextRound = useCallback(async () => {
     if (role !== 'host') return
-    const { currentRound, previousSceneIds, artMode } = stateRef.current
+    const { currentRound, previousSceneIds } = stateRef.current
     const nextRoundNum = currentRound + 1
 
-    if (artMode === 'classic') {
-      const params = generateParams(nextRoundNum, previousSceneIds, SCENE_REGISTRY)
-      setState((prev) => ({ ...prev, previousSceneIds: [...prev.previousSceneIds, params.sceneId] }))
-      send({ type: 'start_round', round: nextRoundNum, params })
-      return
-    }
-
-    // AI mode: use prefetched round or generate on demand
+    // Use prefetched round or generate on demand
     const prefetched = prefetchRef.current
     prefetchRef.current = null
 
@@ -333,14 +321,13 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
       params = { ...fallbackParams }
 
       setState((prev) => ({ ...prev, isGeneratingArt: true }))
-      const mode = artMode === 'ai-script' ? 'script' as const : 'json' as const
       try {
         const response = await generateRound({
-          mode,
+          mode: 'script',
           coherence: fallbackParams.coherence,
           previousThemes: previousThemesRef.current,
         })
-        const svg = convertRoundToSvg(response.content, response.fallback, mode)
+        const svg = convertRoundToSvg(response.content, response.fallback, 'script')
         if (svg) {
           params.svgContent = svg
           params.theme = response.theme
@@ -356,7 +343,7 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     send({ type: 'start_round', round: nextRoundNum, params })
 
     // Start prefetching next round
-    prefetchRef.current = startPrefetch(nextRoundNum + 1, artMode, previousThemesRef.current)
+    prefetchRef.current = startPrefetch(nextRoundNum + 1, 'ai-script', previousThemesRef.current)
   }, [role, send])
 
   const handleViewResults = useCallback(() => {

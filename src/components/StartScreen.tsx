@@ -1,16 +1,13 @@
-import { useState } from 'react'
 import { t } from '../lib/i18n'
-import type { ArtMode } from '../types'
 
 interface StartScreenProps {
-  onStart: (artMode: ArtMode) => void
+  onStart: () => void
   onCreateRoom?: () => void
   onJoinRoom?: () => void
   roomCodeFromUrl?: string | null
 }
 
 export function StartScreen({ onStart, onCreateRoom, onJoinRoom, roomCodeFromUrl }: StartScreenProps) {
-  const [artMode, setArtMode] = useState<ArtMode>('classic')
   // Guest join form: just room code + join button
   if (roomCodeFromUrl && onJoinRoom) {
     return (
@@ -35,27 +32,8 @@ export function StartScreen({ onStart, onCreateRoom, onJoinRoom, roomCodeFromUrl
         {t().tagline}
       </p>
       <div className="w-full max-w-sm space-y-4">
-        <div className="flex rounded-lg overflow-hidden border border-gray-700">
-          {([
-            ['classic', t().artModeClassic, 'bg-gray-700'],
-            ['ai-script', t().artModeScript, 'bg-blue-600'],
-            ['ai-json', t().artModeJson, 'bg-purple-600'],
-          ] as const).map(([mode, label, activeBg]) => (
-            <button
-              key={mode}
-              onClick={() => setArtMode(mode as ArtMode)}
-              className={`flex-1 py-2 text-sm font-medium transition-colors cursor-pointer ${
-                artMode === mode
-                  ? `${activeBg} text-white`
-                  : 'bg-gray-900 text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
         <button
-          onClick={() => onStart(artMode)}
+          onClick={onStart}
           className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-medium transition-colors cursor-pointer"
         >
           One Shot!

@@ -36,6 +36,13 @@
   - リモートモード: ホストがSVGを生成しPartyKit WebSocket経由で配布
   - LLMによるテーマ自由選択（固定テーマリスト廃止）、`previousThemes`で重複回避
   - ラウンド単位生成＋バックグラウンド先読み（ラウンドN中にN+1を生成）
+- **v10: AI Script専用化 — ClassicとAI Sceneモードを廃止**
+  - StartScreenとRoomLobbyからモード選択UIを削除 — AI Scriptが唯一のモード
+  - `ArtMode` 型を `'classic' | 'ai-script' | 'ai-json'` → `'ai-script'` に縮小
+  - Classicモードの分岐をすべて削除（`generateParams`のみのパスなし）
+  - AI Scene（JSON）モードを削除 — `json-svg-renderer`のインポートも除去
+  - スタート画面マウント時にラウンド1の画像を事前生成（ユーザーが"One Shot!"を押す前にバックグラウンドで先読み開始）
+  - リスタート時にもラウンド1の先読みを即座に再開
 
 ---
 
@@ -317,7 +324,7 @@ LLMが毎回自由にテーマを選択し、`previousThemes`で重複を回避�
 ```
 Request:
 {
-  mode: "script" | "json",     // script = JSコード, json = シーン記述
+  mode: "script",               // JSコード→SVG（唯一のモード）
   coherence: number,            // 0.0-1.0、抽象度を制御
   previousThemes?: string[],    // 使用済みテーマ（回避用）
   lang?: "en" | "ja"
@@ -325,7 +332,7 @@ Request:
 
 Response:
 {
-  content: string,     // JSコードまたはJSONシーン（フォールバック時は空文字列）
+  content: string,     // JSコード（フォールバック時は空文字列）
   fallback: boolean,   // 生成失敗時true、クライアントはClassicシーンを使用
   theme?: string       // LLMが選んだテーマラベル（2〜5語）
 }

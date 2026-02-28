@@ -7,11 +7,10 @@ describe('RoomLobby', () => {
   })
 
   it('accepts required props type signature', () => {
-    // Type-level check: onStartGame now receives ArtMode
     const props: Parameters<typeof RoomLobby>[0] = {
       roomCode: 'ABC123',
       isHost: true,
-      onStartGame: (_artMode) => {},
+      onStartGame: () => {},
     }
     expect(props.roomCode).toBe('ABC123')
     expect(props.isHost).toBe(true)

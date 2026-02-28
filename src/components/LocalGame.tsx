@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { StartScreen } from './StartScreen'
 import { GameScreen } from './GameScreen'
 import { RoundResultScreen } from './RoundResultScreen'
@@ -11,7 +11,7 @@ import { buildShareText, shareToTwitter } from '../lib/share'
 import { t } from '../lib/i18n'
 import { convertRoundToSvg, startPrefetch } from '../lib/art-prefetch'
 import type { PrefetchedRound } from '../lib/art-prefetch'
-import type { ArtMode, GameState, RoundRecord, VisualParams } from '../types'
+import type { GameState, RoundRecord, VisualParams } from '../types'
 
 function createInitialState(): GameState {
   return {
@@ -25,7 +25,7 @@ function createInitialState(): GameState {
     error: null,
     finalComment: null,
     mode: 'local',
-    artMode: 'classic',
+    artMode: 'ai-script',
     remote: null,
   }
 }
@@ -44,25 +44,14 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
   const judgingRef = useRef(false)
   const prefetchRef = useRef<PrefetchedRound | null>(null)
   const previousThemesRef = useRef<string[]>([])
+  const round1PrefetchRef = useRef<PrefetchedRound | null>(null)
 
-  const startGame = useCallback(async (artMode: ArtMode) => {
-    prefetchRef.current = null
-    previousThemesRef.current = []
+  // Pre-generate round 1 image when start screen is shown
+  useEffect(() => {
+    round1PrefetchRef.current = startPrefetch(1, 'ai-script', [])
+  }, [])
 
-    if (artMode === 'classic') {
-      const params = generateParams(1, [], SCENE_REGISTRY)
-      setState({
-        ...createInitialState(),
-        phase: 'playing',
-        currentRound: 1,
-        currentParams: params,
-        previousSceneIds: [params.sceneId],
-        artMode,
-      })
-      return
-    }
-
-    // AI mode: generate round 1 only
+  const startGame = useCallback(async () => {
     const fallbackParams = generateParams(1, [], SCENE_REGISTRY)
     setState({
       ...createInitialState(),
@@ -70,34 +59,54 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
       currentRound: 1,
       currentParams: fallbackParams,
       previousSceneIds: [fallbackParams.sceneId],
-      artMode,
+      artMode: 'ai-script',
     })
-    setIsGeneratingArt(true)
 
-    const mode = artMode === 'ai-script' ? 'script' as const : 'json' as const
-    try {
-      const response = await generateRound({
-        mode,
-        coherence: fallbackParams.coherence,
-        previousThemes: [],
-      })
-      const svg = convertRoundToSvg(response.content, response.fallback, mode)
-      if (svg) {
-        const theme = response.theme
+    // Use pre-generated round 1 if available
+    const round1Prefetch = round1PrefetchRef.current
+    round1PrefetchRef.current = null
+
+    if (round1Prefetch) {
+      if (round1Prefetch.promise) {
+        setIsGeneratingArt(true)
+        await round1Prefetch.promise
+        setIsGeneratingArt(false)
+      }
+      if (round1Prefetch.svgContent) {
+        const theme = round1Prefetch.theme
         if (theme) previousThemesRef.current.push(theme)
         setState((prev) => ({
           ...prev,
-          currentParams: { ...prev.currentParams, svgContent: svg, theme },
+          currentParams: { ...prev.currentParams, svgContent: round1Prefetch.svgContent!, theme },
         }))
       }
-    } catch {
-      // Fallback to classic scene silently
-    } finally {
-      setIsGeneratingArt(false)
+    } else {
+      // Fallback: generate on demand if prefetch was somehow missing
+      setIsGeneratingArt(true)
+      try {
+        const response = await generateRound({
+          mode: 'script',
+          coherence: fallbackParams.coherence,
+          previousThemes: [],
+        })
+        const svg = convertRoundToSvg(response.content, response.fallback, 'script')
+        if (svg) {
+          const theme = response.theme
+          if (theme) previousThemesRef.current.push(theme)
+          setState((prev) => ({
+            ...prev,
+            currentParams: { ...prev.currentParams, svgContent: svg, theme },
+          }))
+        }
+      } catch {
+        // Fallback to classic scene silently
+      } finally {
+        setIsGeneratingArt(false)
+      }
     }
 
     // Start prefetching round 2
-    prefetchRef.current = startPrefetch(2, artMode, previousThemesRef.current)
+    prefetchRef.current = startPrefetch(2, 'ai-script', previousThemesRef.current)
   }, [])
 
   const submitGuesses = useCallback(async (guessA: string, guessB: string) => {
@@ -176,19 +185,7 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
 
     const nextRoundNum = prev.currentRound + 1
 
-    if (prev.artMode === 'classic') {
-      const params = generateParams(nextRoundNum, prev.previousSceneIds, SCENE_REGISTRY)
-      setState((s) => ({
-        ...s,
-        phase: 'playing',
-        currentRound: nextRoundNum,
-        currentParams: params,
-        previousSceneIds: [...s.previousSceneIds, params.sceneId],
-      }))
-      return
-    }
-
-    // AI mode: use prefetched round or generate on demand
+    // Use prefetched round or generate on demand
     const prefetched = prefetchRef.current
     prefetchRef.current = null
 
@@ -232,14 +229,13 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
       }))
       setIsGeneratingArt(true)
 
-      const mode = prev.artMode === 'ai-script' ? 'script' as const : 'json' as const
       try {
         const response = await generateRound({
-          mode,
+          mode: 'script',
           coherence: fallbackParams.coherence,
           previousThemes: previousThemesRef.current,
         })
-        const svg = convertRoundToSvg(response.content, response.fallback, mode)
+        const svg = convertRoundToSvg(response.content, response.fallback, 'script')
         if (svg) {
           if (response.theme) previousThemesRef.current.push(response.theme)
           setState((s) => ({
@@ -255,13 +251,15 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
     }
 
     // Start prefetching next round
-    prefetchRef.current = startPrefetch(nextRoundNum + 1, prev.artMode, previousThemesRef.current)
+    prefetchRef.current = startPrefetch(nextRoundNum + 1, 'ai-script', previousThemesRef.current)
   }, [])
 
   const restart = useCallback(() => {
     prefetchRef.current = null
     previousThemesRef.current = []
     setState(createInitialState())
+    // Re-start prefetching round 1 for the new game
+    round1PrefetchRef.current = startPrefetch(1, 'ai-script', [])
   }, [])
 
   const share = useCallback(() => {

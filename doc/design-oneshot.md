@@ -36,6 +36,13 @@ How long can they keep matching?
   - Remote mode: host generates SVG and distributes via PartyKit WebSocket
   - Free theme selection by LLM (no fixed theme list), with `previousThemes` deduplication
   - Per-round generation with background prefetching (round N+1 generated while playing round N)
+- **v10: AI Script only — removed Classic and AI Scene modes**
+  - Removed art mode selector from StartScreen and RoomLobby — AI Script is the only mode
+  - `ArtMode` type narrowed from `'classic' | 'ai-script' | 'ai-json'` to `'ai-script'`
+  - Removed all Classic mode branches (no more `generateParams`-only paths)
+  - Removed AI Scene (JSON) mode — no longer imports `json-svg-renderer`
+  - Round 1 image pre-generated on start screen mount (background prefetch begins before user clicks "One Shot!")
+  - On restart, round 1 prefetch restarts immediately
 
 ---
 
@@ -324,7 +331,7 @@ The LLM freely chooses a theme each round; `previousThemes` prevents repetition.
 ```
 Request:
 {
-  mode: "script" | "json",     // script = JS code, json = scene description
+  mode: "script",               // JS code → SVG (only mode)
   coherence: number,            // 0.0-1.0, controls abstraction level
   previousThemes?: string[],    // themes to avoid (already used)
   lang?: "en" | "ja"
@@ -332,7 +339,7 @@ Request:
 
 Response:
 {
-  content: string,     // JS code or JSON scene (empty if fallback)
+  content: string,     // JS code (empty if fallback)
   fallback: boolean,   // true if generation failed, client should use classic scene
   theme?: string       // LLM-chosen theme label (2-5 words)
 }

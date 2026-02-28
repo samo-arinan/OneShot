@@ -63,7 +63,7 @@ export interface JudgeResponse {
   comment: string
 }
 
-export type ArtMode = 'classic' | 'ai-script' | 'ai-json'
+export type ArtMode = 'ai-script'
 
 export interface GenerateRoundRequest {
   mode: 'script' | 'json'
