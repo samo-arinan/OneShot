@@ -25,13 +25,22 @@ export function AbstractArt({ params, width = 600, height = 400, className = '' 
     })
   }, [params.svgContent, params.seed, params.coherence, params.sceneId, width, height])
 
-  if (!svgString) return null
+  const dataUri = useMemo(() => {
+    if (!svgString) return ''
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`
+  }, [svgString])
+
+  if (!dataUri) return null
 
   return (
-    <div
+    <img
+      src={dataUri}
+      width={width}
+      height={height}
       className={`art-container ${className}`}
-      style={{ width, height, overflow: 'hidden' }}
-      dangerouslySetInnerHTML={{ __html: svgString }}
+      style={{ width, height }}
+      alt="Abstract art"
+      draggable
     />
   )
 }
