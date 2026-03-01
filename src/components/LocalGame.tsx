@@ -4,7 +4,7 @@ import { GameScreen } from './GameScreen'
 import { RoundResultScreen } from './RoundResultScreen'
 import { ResultsScreen } from './ResultsScreen'
 import { judgeGuesses } from '../lib/api'
-import { generateParams, computeCoherence } from '../lib/scene-selector'
+import { generateParams } from '../lib/scene-selector'
 import { SCENE_REGISTRY } from '../scenes/registry'
 import { buildShareText, shareToTwitter } from '../lib/share'
 import { t } from '../lib/i18n'
@@ -16,7 +16,7 @@ function createInitialState(): GameState {
   return {
     phase: 'start',
     currentRound: 0,
-    currentParams: { seed: 0, coherence: 1, sceneId: '' },
+    currentParams: { seed: 0, sceneId: '' },
     previousSceneIds: [],
     history: [],
     lastResult: null,
@@ -47,7 +47,7 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
 
   // Pre-generate round 1 image when start screen is shown
   useEffect(() => {
-    round1PrefetchRef.current = startPrefetch(1, 'ai-script', [])
+    round1PrefetchRef.current = startPrefetch('ai-script', [])
   }, [])
 
   const startGame = useCallback(async () => {
@@ -82,7 +82,7 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
     } else {
       // Fallback: generate on demand if prefetch was somehow missing
       setIsGeneratingArt(true)
-      const art = await generateSvgWithRetry(computeCoherence(1), [])
+      const art = await generateSvgWithRetry([])
       if (art.svgContent) {
         if (art.theme) previousThemesRef.current.push(art.theme)
         setState((prev) => ({
@@ -94,7 +94,7 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
     }
 
     // Start prefetching round 2
-    prefetchRef.current = startPrefetch(2, 'ai-script', previousThemesRef.current)
+    prefetchRef.current = startPrefetch('ai-script', previousThemesRef.current)
   }, [])
 
   const submitGuesses = useCallback(async (guessA: string, guessB: string) => {
@@ -216,7 +216,7 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
         currentParams: fallbackParams,
       }))
       setIsGeneratingArt(true)
-      const art = await generateSvgWithRetry(computeCoherence(nextRoundNum), previousThemesRef.current)
+      const art = await generateSvgWithRetry(previousThemesRef.current)
       if (art.svgContent) {
         if (art.theme) previousThemesRef.current.push(art.theme)
         setState((s) => ({
@@ -228,7 +228,7 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
     }
 
     // Start prefetching next round
-    prefetchRef.current = startPrefetch(nextRoundNum + 1, 'ai-script', previousThemesRef.current)
+    prefetchRef.current = startPrefetch('ai-script', previousThemesRef.current)
   }, [])
 
   const restart = useCallback(() => {
@@ -236,7 +236,7 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
     previousThemesRef.current = []
     setState(createInitialState())
     // Re-start prefetching round 1 for the new game
-    round1PrefetchRef.current = startPrefetch(1, 'ai-script', [])
+    round1PrefetchRef.current = startPrefetch('ai-script', [])
   }, [])
 
   const share = useCallback(() => {

@@ -1,7 +1,7 @@
 import type { ArtMode, VisualParams } from '../types'
 import { generateRound } from './svg-generator'
 import { executeSvgScript } from './script-svg-executor'
-import { generateParams, computeCoherence } from './scene-selector'
+import { generateParams } from './scene-selector'
 import { SCENE_REGISTRY } from '../scenes/registry'
 
 const MAX_SVG_RETRIES = 2
@@ -33,14 +33,12 @@ export function convertRoundToSvg(
  * Returns { svgContent, theme } — svgContent is null only after all attempts exhausted.
  */
 export async function generateSvgWithRetry(
-  coherence: number,
   previousThemes: string[],
 ): Promise<GeneratedArt> {
   for (let attempt = 0; attempt <= MAX_SVG_RETRIES; attempt++) {
     try {
       const response = await generateRound({
         mode: 'script',
-        coherence,
         previousThemes,
       })
       const svg = convertRoundToSvg(response.content, response.fallback, 'script')
@@ -55,12 +53,10 @@ export async function generateSvgWithRetry(
 }
 
 export function startPrefetch(
-  round: number,
   _artMode: ArtMode,
   previousThemes: string[],
 ): PrefetchedRound {
   const params = generateParams(0, [], SCENE_REGISTRY)
-  const coherence = computeCoherence(round)
 
   const prefetched: PrefetchedRound = {
     params,
@@ -70,7 +66,7 @@ export function startPrefetch(
   }
 
   const doFetch = async () => {
-    const result = await generateSvgWithRetry(coherence, previousThemes)
+    const result = await generateSvgWithRetry(previousThemes)
     prefetched.svgContent = result.svgContent
     prefetched.theme = result.theme
     prefetched.promise = null
