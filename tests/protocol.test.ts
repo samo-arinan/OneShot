@@ -20,21 +20,19 @@ describe('protocol types', () => {
     expect(Object.keys(phases)).toHaveLength(5)
   })
 
-  it('VisualParamsWire has seed, coherence, sceneId', () => {
+  it('VisualParamsWire has seed and sceneId', () => {
     const params: VisualParamsWire = {
       seed: 42,
-      coherence: 0.9,
       sceneId: 'test-scene',
     }
     expect(params.seed).toBe(42)
-    expect(params.coherence).toBe(0.9)
     expect(params.sceneId).toBe('test-scene')
   })
 
   it('RoundRecordWire has all required fields', () => {
     const record: RoundRecordWire = {
       round: 1,
-      params: { seed: 42, coherence: 0.9, sceneId: 'test' },
+      params: { seed: 42, sceneId: 'test' },
       guessA: 'mountain',
       guessB: 'hill',
       match: 'close',
@@ -89,7 +87,7 @@ describe('protocol types', () => {
     const msg: ClientMessage = {
       type: 'start_round',
       round: 1,
-      params: { seed: 100, coherence: 0.9, sceneId: 'landscape_1' },
+      params: { seed: 100, sceneId: 'landscape_1' },
     }
     const json = JSON.stringify(msg)
     const parsed: ClientMessage = JSON.parse(json)
@@ -129,7 +127,7 @@ describe('protocol types', () => {
     const msg: ServerMessage = {
       type: 'round_start',
       round: 2,
-      params: { seed: 200, coherence: 0.7, sceneId: 'sky_3' },
+      params: { seed: 200, sceneId: 'sky_3' },
     }
     const json = JSON.stringify(msg)
     const parsed: ServerMessage = JSON.parse(json)

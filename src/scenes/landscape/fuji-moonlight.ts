@@ -1,45 +1,38 @@
 import type { Scene, SceneRenderParams } from '../../types'
-import { jitter, distortPath, buildDistortionFilter, distortPalette, ridgePointsToPath } from '../../lib/coherence-utils'
+import { ridgePointsToPath } from '../../lib/svg-utils'
 
 export const fujiMoonlight: Scene = {
   id: 'fuji-moonlight',
   name: '月夜の富士',
   category: 'landscape',
 
-  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
-    const palette = distortPalette(
-      ['#1B3A5C', '#0D1B2A', '#2C2C2C', '#C9A959', '#F5F0E8'],
-      coherence, rng
-    )
-    const filterId = `distort-${seed}`
-    const filter = buildDistortionFilter(coherence, filterId, seed)
+  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
+    const palette = ['#1B3A5C', '#0D1B2A', '#2C2C2C', '#C9A959', '#F5F0E8']
 
     // Layer 1: Background
-    const horizonY = jitter(H * 0.55, coherence, rng, H * 0.15)
+    const horizonY = H * 0.55
 
     // Layer 2: Mountain ridge
-    const peakX = jitter(W * 0.45, coherence, rng, W * 0.1)
-    const peakY = jitter(H * 0.2, coherence, rng, H * 0.1)
-    const ridgePoints = distortPath([
+    const peakX = W * 0.45
+    const peakY = H * 0.2
+    const ridgePoints = [
       { x: 0, y: horizonY },
       { x: W * 0.2, y: horizonY - H * 0.05 },
       { x: peakX, y: peakY },
       { x: W * 0.7, y: horizonY - H * 0.03 },
       { x: W, y: horizonY + H * 0.02 },
-    ], coherence, rng)
+    ]
 
     // Layer 4: Moon accent
-    const moonX = jitter(W * 0.78, coherence, rng, W * 0.1)
-    const moonY = jitter(H * 0.15, coherence, rng, H * 0.08)
-    const moonR = jitter(25, coherence, rng, 10)
-    const showMoon = coherence > 0.5 || rng() > 0.7
+    const moonX = W * 0.78
+    const moonY = H * 0.15
+    const moonR = 25
+    const showMoon = true
 
     const horizonPct = (horizonY / H * 100).toFixed(1)
-    const texOpacity = ((1.0 - coherence) * 0.3).toFixed(2)
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
         <defs>
-          ${filter}
           <linearGradient id="sky-${seed}" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="${palette[1]}" />
             <stop offset="${horizonPct}%" stop-color="${palette[0]}" />
@@ -59,14 +52,8 @@ export const fujiMoonlight: Scene = {
         <rect y="${horizonY.toFixed(1)}" width="${W}" height="${(H - horizonY).toFixed(1)}" fill="url(#ground-${seed})" />
 
         <!-- Layer 2: Mountain silhouette -->
-        <g filter="url(#${filterId})">
-          <path d="${ridgePointsToPath(ridgePoints, W, H)}"
-                fill="${palette[2]}" opacity="0.9" />
-        </g>
-
-        <!-- Layer 3: Texture overlay -->
-        <rect width="${W}" height="${H}" filter="url(#${filterId})"
-              fill="${palette[0]}" opacity="${texOpacity}" />
+        <path d="${ridgePointsToPath(ridgePoints, W, H)}"
+              fill="${palette[2]}" opacity="0.9" />
 
         <!-- Layer 4: Moon -->
         ${showMoon ? `

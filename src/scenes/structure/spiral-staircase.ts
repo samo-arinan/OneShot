@@ -1,31 +1,25 @@
 import type { Scene, SceneRenderParams } from '../../types'
-import { jitter, buildDistortionFilter, distortPalette } from '../../lib/coherence-utils'
 
 export const spiralStaircase: Scene = {
   id: 'spiral-staircase',
   name: '螺旋階段',
   category: 'structure',
 
-  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
-    const palette = distortPalette(
-      ['#2C2C3E', '#1A1A2E', '#4A4A6A', '#C8C8D8', '#F0E8D0'],
-      coherence, rng
-    )
-    const filterId = `distort-${seed}`
-    const filter = buildDistortionFilter(coherence, filterId, seed)
+  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
+    const palette = ['#2C2C3E', '#1A1A2E', '#4A4A6A', '#C8C8D8', '#F0E8D0']
 
     // Layer 1: Background
-    const bgMidPct = jitter(40, coherence, rng, 10).toFixed(1)
+    const bgMidPct = (40).toFixed(1)
 
     // Layer 2: Spiral curves - elliptical arcs descending
-    const cx = jitter(W * 0.5, coherence, rng, W * 0.05)
+    const cx = W * 0.5
     const spiralLevels = 6
-    const spiralTopY = jitter(H * 0.1, coherence, rng, H * 0.04)
+    const spiralTopY = H * 0.1
     const levelSpacing = (H * 0.75) / spiralLevels
-    const maxRx = jitter(W * 0.32, coherence, rng, W * 0.05)
-    const minRx = jitter(W * 0.05, coherence, rng, W * 0.02)
-    const arcRy = jitter(H * 0.04, coherence, rng, H * 0.01)
-    const strokeW = jitter(3.5, coherence, rng, 1.5)
+    const maxRx = W * 0.32
+    const minRx = W * 0.05
+    const arcRy = H * 0.04
+    const strokeW = 3.5
 
     // Build spiral arcs
     const arcs: string[] = []
@@ -52,17 +46,13 @@ export const spiralStaircase: Scene = {
       }
     }
 
-    // Layer 3: Texture
-    const texOpacity = ((1.0 - coherence) * 0.28).toFixed(2)
-
     // Layer 4: Light source above center
-    const lightX = jitter(cx, coherence, rng, W * 0.04)
-    const lightY = jitter(spiralTopY - H * 0.06, coherence, rng, H * 0.03)
-    const lightR = jitter(22, coherence, rng, 8)
+    const lightX = cx
+    const lightY = spiralTopY - H * 0.06
+    const lightR = 22
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
         <defs>
-          ${filter}
           <linearGradient id="bg-${seed}" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="${palette[4]}" stop-opacity="0.5" />
             <stop offset="${bgMidPct}%" stop-color="${palette[1]}" />
@@ -78,17 +68,11 @@ export const spiralStaircase: Scene = {
         <rect width="${W}" height="${H}" fill="url(#bg-${seed})" />
 
         <!-- Layer 2: Spiral staircase curves -->
-        <g filter="url(#${filterId})">
           ${arcs.join('\n          ')}
           <!-- Center column -->
           <line x1="${cx.toFixed(1)}" y1="${spiralTopY.toFixed(1)}"
                 x2="${cx.toFixed(1)}" y2="${(spiralTopY + spiralLevels * levelSpacing).toFixed(1)}"
                 stroke="${palette[2]}" stroke-width="${(strokeW * 1.5).toFixed(1)}" opacity="0.7" />
-        </g>
-
-        <!-- Layer 3: Texture overlay -->
-        <rect width="${W}" height="${H}" filter="url(#${filterId})"
-              fill="${palette[1]}" opacity="${texOpacity}" />
 
         <!-- Layer 4: Light source above -->
         <circle cx="${lightX.toFixed(1)}" cy="${lightY.toFixed(1)}" r="${(lightR * 3).toFixed(1)}"

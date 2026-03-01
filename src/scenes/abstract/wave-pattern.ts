@@ -1,22 +1,16 @@
 import type { Scene, SceneRenderParams } from '../../types'
-import { jitter, buildDistortionFilter, distortPalette } from '../../lib/coherence-utils'
 
 export const wavePattern: Scene = {
   id: 'wave-pattern',
   name: '波紋',
   category: 'abstract',
 
-  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
-    const palette = distortPalette(
-      ['#001A33', '#003D66', '#006699', '#4DB8E8', '#B3E5FC'],
-      coherence, rng
-    )
-    const filterId = `distort-${seed}`
-    const filter = buildDistortionFilter(coherence, filterId, seed)
+  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
+    const palette = ['#001A33', '#003D66', '#006699', '#4DB8E8', '#B3E5FC']
 
     // Layer 1: center of ripples (slightly off-center)
-    const cx = jitter(W * 0.5, coherence, rng, W * 0.12)
-    const cy = jitter(H * 0.5, coherence, rng, H * 0.12)
+    const cx = W * 0.5
+    const cy = H * 0.5
 
     // Layer 2: Concentric ellipses (water ripples)
     const ringCount = 8
@@ -28,8 +22,8 @@ export const wavePattern: Scene = {
       const t = i / ringCount
       const baseRx = maxRx * t
       const baseRy = maxRy * t
-      const rx = jitter(baseRx, coherence, rng, baseRx * 0.12)
-      const ry = jitter(baseRy, coherence, rng, baseRy * 0.12)
+      const rx = baseRx
+      const ry = baseRy
       const colorIdx = Math.min(Math.floor(t * palette.length), palette.length - 1)
       const opacity = (0.3 + (ringCount - i) * 0.06).toFixed(2)
       const strokeW = (1.5 + (ringCount - i) * 0.3).toFixed(1)
@@ -42,15 +36,11 @@ export const wavePattern: Scene = {
       )
     }
 
-    // Layer 3: texture
-    const texOpacity = ((1.0 - coherence) * 0.22).toFixed(2)
-
     // Layer 4: accent bright center
-    const centerR = jitter(Math.min(W, H) * 0.05, coherence, rng, 8)
+    const centerR = Math.min(W, H) * 0.05
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
       <defs>
-        ${filter}
         <radialGradient id="bg-${seed}" cx="50%" cy="50%" r="70%">
           <stop offset="0%" stop-color="${palette[2]}" />
           <stop offset="100%" stop-color="${palette[0]}" />
@@ -65,13 +55,7 @@ export const wavePattern: Scene = {
       <rect width="${W}" height="${H}" fill="url(#bg-${seed})" />
 
       <!-- Layer 2: Concentric ellipses -->
-      <g filter="url(#${filterId})">
         ${ellipses.join('\n        ')}
-      </g>
-
-      <!-- Layer 3: Texture overlay -->
-      <rect width="${W}" height="${H}" filter="url(#${filterId})"
-            fill="${palette[0]}" opacity="${texOpacity}" />
 
       <!-- Layer 4: Center glow and accent -->
       <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(centerR * 4).toFixed(1)}"

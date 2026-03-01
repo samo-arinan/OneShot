@@ -1,43 +1,36 @@
 import type { Scene, SceneRenderParams } from '../../types'
-import { jitter, distortPath, buildDistortionFilter, distortPalette, ridgePointsToPath } from '../../lib/coherence-utils'
+import { ridgePointsToPath } from '../../lib/svg-utils'
 
 export const auroraNight: Scene = {
   id: 'aurora-night',
   name: 'オーロラの夜',
   category: 'sky',
 
-  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
-    const palette = distortPalette(
-      ['#0A0F1E', '#1B5E3B', '#7B2FBE', '#00E5A0', '#E040FB'],
-      coherence, rng
-    )
-    const filterId = `distort-${seed}`
-    const filter = buildDistortionFilter(coherence, filterId, seed)
+  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
+    const palette = ['#0A0F1E', '#1B5E3B', '#7B2FBE', '#00E5A0', '#E040FB']
 
-    const snowY = jitter(H * 0.75, coherence, rng, H * 0.08)
+    const snowY = H * 0.75
 
     // Snow ridge
-    const snowPoints = distortPath([
+    const snowPoints = [
       { x: 0, y: snowY },
       { x: W * 0.25, y: snowY - H * 0.04 },
       { x: W * 0.5, y: snowY + H * 0.02 },
       { x: W * 0.75, y: snowY - H * 0.03 },
       { x: W, y: snowY },
-    ], coherence, rng)
+    ]
 
     // Aurora curtain control points
-    const a1TopY = jitter(H * 0.08, coherence, rng, H * 0.06)
-    const a1BotY = jitter(H * 0.45, coherence, rng, H * 0.08)
-    const a2TopY = jitter(H * 0.12, coherence, rng, H * 0.06)
-    const a2BotY = jitter(H * 0.55, coherence, rng, H * 0.08)
+    const a1TopY = H * 0.08
+    const a1BotY = H * 0.45
+    const a2TopY = H * 0.12
+    const a2BotY = H * 0.55
 
-    const texOpacity = ((1.0 - coherence) * 0.2).toFixed(2)
-    const auroraOpacity1 = (0.5 + coherence * 0.3).toFixed(2)
-    const auroraOpacity2 = (0.35 + coherence * 0.25).toFixed(2)
+    const auroraOpacity1 = '0.80'
+    const auroraOpacity2 = '0.60'
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
       <defs>
-        ${filter}
         <linearGradient id="sky-${seed}" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="${palette[0]}" />
           <stop offset="100%" stop-color="#070B14" />
@@ -62,7 +55,7 @@ export const auroraNight: Scene = {
       <rect width="${W}" height="${H}" fill="url(#sky-${seed})" />
 
       <!-- Layer 2: Aurora curtains -->
-      <g filter="url(#${filterId})" opacity="${auroraOpacity1}">
+      <g opacity="${auroraOpacity1}">
         <path d="M ${(W * 0.1).toFixed(1)} ${a1TopY.toFixed(1)}
                  C ${(W * 0.2).toFixed(1)} ${(a1TopY + H * 0.1).toFixed(1)},
                    ${(W * 0.3).toFixed(1)} ${(a1BotY - H * 0.05).toFixed(1)},
@@ -72,7 +65,7 @@ export const auroraNight: Scene = {
                    ${(W * 0.55).toFixed(1)} ${a1TopY.toFixed(1)} Z"
               fill="url(#aurora1-${seed})" />
       </g>
-      <g filter="url(#${filterId})" opacity="${auroraOpacity2}">
+      <g opacity="${auroraOpacity2}">
         <path d="M ${(W * 0.4).toFixed(1)} ${a2TopY.toFixed(1)}
                  C ${(W * 0.5).toFixed(1)} ${(a2TopY + H * 0.12).toFixed(1)},
                    ${(W * 0.6).toFixed(1)} ${(a2BotY - H * 0.04).toFixed(1)},
@@ -82,10 +75,6 @@ export const auroraNight: Scene = {
                    ${(W * 0.95).toFixed(1)} ${a2TopY.toFixed(1)} Z"
               fill="url(#aurora2-${seed})" />
       </g>
-
-      <!-- Layer 3: Texture overlay -->
-      <rect width="${W}" height="${H}" filter="url(#${filterId})"
-            fill="${palette[0]}" opacity="${texOpacity}" />
 
       <!-- Layer 4: Snow field accent -->
       <path d="${ridgePointsToPath(snowPoints, W, H)}"

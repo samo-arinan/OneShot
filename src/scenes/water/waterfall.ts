@@ -1,29 +1,23 @@
 import type { Scene, SceneRenderParams } from '../../types'
-import { jitter, buildDistortionFilter, distortPalette } from '../../lib/coherence-utils'
 
 export const waterfall: Scene = {
   id: 'waterfall',
   name: '滝',
   category: 'water',
 
-  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
-    const palette = distortPalette(
-      ['#2a3020', '#3a4030', '#c8dce8', '#e8f4fc', '#ffffff'],
-      coherence, rng
-    )
-    const filterId = `distort-${seed}`
-    const filter = buildDistortionFilter(coherence, filterId, seed)
+  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
+    const palette = ['#2a3020', '#3a4030', '#c8dce8', '#e8f4fc', '#ffffff']
 
     // Layer 1: Background - dark rock / forest
-    const fallCenterX = jitter(W * 0.5, coherence, rng, W * 0.05)
-    const fallWidth = jitter(W * 0.22, coherence, rng, W * 0.05)
+    const fallCenterX = W * 0.5
+    const fallWidth = W * 0.22
 
     // Layer 2: Central waterfall band - vertical white streaks
     const streamLines: string[] = []
-    const streamCount = Math.floor(jitter(12, coherence, rng, 5))
+    const streamCount = Math.floor(12)
     for (let i = 0; i < streamCount; i++) {
       const sx = fallCenterX - fallWidth / 2 + rng() * fallWidth
-      const sWiggle = jitter(4, coherence, rng, 6)
+      const sWiggle = 4
       let d = `M ${sx.toFixed(1)} 0`
       for (let y = 0; y <= H; y += 15) {
         const x = sx + Math.sin(y * 0.03 + rng() * Math.PI) * sWiggle
@@ -35,33 +29,30 @@ export const waterfall: Scene = {
     }
 
     // Rock silhouettes left and right
-    const leftRockW = jitter(fallCenterX - fallWidth / 2, coherence, rng, W * 0.05)
-    const rightRockX = jitter(fallCenterX + fallWidth / 2, coherence, rng, W * 0.05)
+    const leftRockW = fallCenterX - fallWidth / 2
+    const rightRockX = fallCenterX + fallWidth / 2
 
     // Jagged rock edges
     let leftEdge = `M 0 0 L 0 ${H} L ${leftRockW.toFixed(1)} ${H}`
     for (let y = H; y >= 0; y -= 20) {
-      const ex = leftRockW + jitter(0, coherence, rng, 15)
+      const ex = leftRockW + 0
       leftEdge += ` L ${ex.toFixed(1)} ${y}`
     }
     leftEdge += ' Z'
 
     let rightEdge = `M ${W} 0 L ${W} ${H} L ${rightRockX.toFixed(1)} ${H}`
     for (let y = H; y >= 0; y -= 20) {
-      const ex = rightRockX + jitter(0, coherence, rng, 15)
+      const ex = rightRockX + 0
       rightEdge += ` L ${ex.toFixed(1)} ${y}`
     }
     rightEdge += ' Z'
 
-    const texOpacity = ((1.0 - coherence) * 0.2).toFixed(2)
-
     // Layer 4: Mist / splash at bottom
-    const mistY = jitter(H * 0.85, coherence, rng, H * 0.05)
-    const mistR = jitter(fallWidth * 0.8, coherence, rng, fallWidth * 0.2)
+    const mistY = H * 0.85
+    const mistR = fallWidth * 0.8
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
         <defs>
-          ${filter}
           <linearGradient id="rock-${seed}" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="${palette[1]}" />
             <stop offset="100%" stop-color="${palette[0]}" />
@@ -82,15 +73,11 @@ export const waterfall: Scene = {
               fill="url(#fall-${seed})" opacity="0.8" />
 
         <!-- Layer 2: Waterfall streams -->
-        <g filter="url(#${filterId})">
-          ${streamLines.join('\n          ')}
-        </g>
+        ${streamLines.join('\n          ')}
 
         <!-- Layer 3: Rock silhouettes -->
         <path d="${leftEdge}" fill="url(#rock-${seed})" />
         <path d="${rightEdge}" fill="url(#rock-${seed})" />
-        <rect width="${W}" height="${H}" filter="url(#${filterId})"
-              fill="${palette[0]}" opacity="${texOpacity}" />
 
         <!-- Layer 4: Mist at base -->
         <ellipse cx="${fallCenterX.toFixed(1)}" cy="${mistY.toFixed(1)}"

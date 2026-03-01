@@ -6,7 +6,7 @@ import { RemoteGameScreen } from './RemoteGameScreen'
 import { RoundResultScreen } from './RoundResultScreen'
 import { ResultsScreen } from './ResultsScreen'
 import { judgeGuesses } from '../lib/api'
-import { generateParams } from '../lib/scene-selector'
+import { generateParams, computeCoherence } from '../lib/scene-selector'
 import { SCENE_REGISTRY } from '../scenes/registry'
 import { buildShareText, shareToTwitter } from '../lib/share'
 import { seededRandom } from '../lib/seeded-random'
@@ -266,7 +266,7 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     const scene = SCENE_REGISTRY.find(s => s.id === params.sceneId)
     if (scene) {
       const rng = seededRandom(params.seed)
-      const svg = scene.render({ width: 360, height: 360, seed: params.seed, coherence: params.coherence, rng })
+      const svg = scene.render({ width: 360, height: 360, seed: params.seed, rng })
       send({ type: 'update_round_art', svgContent: svg })
     }
   }, [send])
@@ -286,7 +286,7 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     send({ type: 'start_round', round: 1, params: fallbackParams })
 
     // Generate AI art in background, then update both players
-    const art = await generateSvgWithRetry(fallbackParams.coherence, [])
+    const art = await generateSvgWithRetry(computeCoherence(1), [])
     if (art.svgContent) {
       if (art.theme) previousThemesRef.current.push(art.theme)
       send({ type: 'update_round_art', svgContent: art.svgContent, theme: art.theme })
@@ -340,7 +340,7 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
       const fallbackParams = generateParams(nextRoundNum, previousSceneIds, SCENE_REGISTRY)
       send({ type: 'start_round', round: nextRoundNum, params: fallbackParams })
 
-      const art = await generateSvgWithRetry(fallbackParams.coherence, previousThemesRef.current)
+      const art = await generateSvgWithRetry(computeCoherence(nextRoundNum), previousThemesRef.current)
       if (art.svgContent) {
         if (art.theme) previousThemesRef.current.push(art.theme)
         send({ type: 'update_round_art', svgContent: art.svgContent, theme: art.theme })

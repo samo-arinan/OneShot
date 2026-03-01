@@ -1,30 +1,25 @@
 import type { Scene, SceneRenderParams } from '../../types'
-import { jitter, distortPath, buildDistortionFilter, distortPalette, ridgePointsToPath } from '../../lib/coherence-utils'
+import { ridgePointsToPath } from '../../lib/svg-utils'
 
 export const snowyPeak: Scene = {
   id: 'snowy-peak',
   name: '雪山',
   category: 'landscape',
 
-  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
-    const palette = distortPalette(
-      ['#B8D4F0', '#7AA8D8', '#4A7AAA', '#E8F4FF', '#FFFFFF'],
-      coherence, rng
-    )
-    const filterId = `distort-${seed}`
-    const filter = buildDistortionFilter(coherence, filterId, seed)
+  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
+    const palette = ['#B8D4F0', '#7AA8D8', '#4A7AAA', '#E8F4FF', '#FFFFFF']
 
     // Layer 1: Background sky
-    const horizonY = jitter(H * 0.65, coherence, rng, H * 0.08)
+    const horizonY = H * 0.65
     const horizonPct = (horizonY / H * 100).toFixed(1)
 
     // Layer 2: Mountain silhouette - sharp triangular peak
-    const peakX = jitter(W * 0.48, coherence, rng, W * 0.08)
-    const peakY = jitter(H * 0.12, coherence, rng, H * 0.08)
-    const leftFootX = jitter(0, coherence, rng, W * 0.05)
-    const rightFootX = jitter(W, coherence, rng, W * 0.05)
+    const peakX = W * 0.48
+    const peakY = H * 0.12
+    const leftFootX = 0
+    const rightFootX = W
 
-    const mountainPoints = distortPath([
+    const mountainPoints = [
       { x: leftFootX, y: horizonY },
       { x: W * 0.1, y: horizonY - H * 0.08 },
       { x: W * 0.28, y: peakY + H * 0.18 },
@@ -32,25 +27,22 @@ export const snowyPeak: Scene = {
       { x: W * 0.62, y: peakY + H * 0.15 },
       { x: W * 0.82, y: horizonY - H * 0.05 },
       { x: rightFootX, y: horizonY },
-    ], coherence, rng)
+    ]
 
     // Layer 2: Snow cap highlight
-    const snowPoints = distortPath([
+    const snowPoints = [
       { x: peakX - W * 0.06, y: peakY + H * 0.1 },
       { x: peakX - W * 0.02, y: peakY + H * 0.04 },
       { x: peakX, y: peakY },
       { x: peakX + W * 0.03, y: peakY + H * 0.05 },
       { x: peakX + W * 0.08, y: peakY + H * 0.12 },
-    ], coherence, rng)
-
-    // Layer 3: Texture overlay
-    const texOpacity = ((1.0 - coherence) * 0.2).toFixed(2)
+    ]
 
     // Layer 4: Cloud accent
-    const cloudX = jitter(W * 0.2, coherence, rng, W * 0.15)
-    const cloudY = jitter(H * 0.25, coherence, rng, H * 0.1)
-    const cloudR = jitter(30, coherence, rng, 12)
-    const showCloud = coherence > 0.4 || rng() > 0.5
+    const cloudX = W * 0.2
+    const cloudY = H * 0.25
+    const cloudR = 30
+    const showCloud = true
 
     const snowPath = (() => {
       const pts = snowPoints
@@ -67,7 +59,6 @@ export const snowyPeak: Scene = {
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
         <defs>
-          ${filter}
           <linearGradient id="sky-${seed}" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="${palette[3]}" />
             <stop offset="${horizonPct}%" stop-color="${palette[0]}" />
@@ -87,20 +78,12 @@ export const snowyPeak: Scene = {
         <rect y="${horizonY.toFixed(1)}" width="${W}" height="${(H - horizonY).toFixed(1)}" fill="url(#ground-${seed})" />
 
         <!-- Layer 2: Mountain silhouette -->
-        <g filter="url(#${filterId})">
-          <path d="${ridgePointsToPath(mountainPoints, W, H)}"
-                fill="url(#mountain-${seed})" opacity="0.93" />
-        </g>
+        <path d="${ridgePointsToPath(mountainPoints, W, H)}"
+              fill="url(#mountain-${seed})" opacity="0.93" />
 
         <!-- Layer 2: Snow cap -->
-        <g filter="url(#${filterId})">
-          <path d="${snowPath}"
-                fill="${palette[4]}" opacity="0.9" />
-        </g>
-
-        <!-- Layer 3: Texture overlay -->
-        <rect width="${W}" height="${H}" filter="url(#${filterId})"
-              fill="${palette[0]}" opacity="${texOpacity}" />
+        <path d="${snowPath}"
+              fill="${palette[4]}" opacity="0.9" />
 
         <!-- Layer 4: Cloud accent -->
         ${showCloud ? `

@@ -1,9 +1,5 @@
 import type { Scene, VisualParams } from '../types'
 
-export function computeCoherence(round: number): number {
-  return Math.max(0.1, 1.1 - round * 0.2)
-}
-
 export function selectScene(
   rng: () => number,
   excludeIds: string[],
@@ -44,8 +40,7 @@ export function generateParams(
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
-  const coherence = computeCoherence(round)
   const recentIds = previousSceneIds.slice(-2)
   const scene = selectScene(rng, recentIds, scenes)
-  return { seed, coherence, sceneId: scene.id }
+  return { seed, sceneId: scene.id }
 }

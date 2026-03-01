@@ -4,7 +4,7 @@ import { GameScreen } from './GameScreen'
 import { RoundResultScreen } from './RoundResultScreen'
 import { ResultsScreen } from './ResultsScreen'
 import { judgeGuesses } from '../lib/api'
-import { generateParams } from '../lib/scene-selector'
+import { generateParams, computeCoherence } from '../lib/scene-selector'
 import { SCENE_REGISTRY } from '../scenes/registry'
 import { buildShareText, shareToTwitter } from '../lib/share'
 import { t } from '../lib/i18n'
@@ -82,7 +82,7 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
     } else {
       // Fallback: generate on demand if prefetch was somehow missing
       setIsGeneratingArt(true)
-      const art = await generateSvgWithRetry(fallbackParams.coherence, [])
+      const art = await generateSvgWithRetry(computeCoherence(1), [])
       if (art.svgContent) {
         if (art.theme) previousThemesRef.current.push(art.theme)
         setState((prev) => ({
@@ -216,7 +216,7 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
         currentParams: fallbackParams,
       }))
       setIsGeneratingArt(true)
-      const art = await generateSvgWithRetry(fallbackParams.coherence, previousThemesRef.current)
+      const art = await generateSvgWithRetry(computeCoherence(nextRoundNum), previousThemesRef.current)
       if (art.svgContent) {
         if (art.theme) previousThemesRef.current.push(art.theme)
         setState((s) => ({

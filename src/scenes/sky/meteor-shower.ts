@@ -1,29 +1,21 @@
 import type { Scene, SceneRenderParams } from '../../types'
-import { jitter, buildDistortionFilter, distortPalette } from '../../lib/coherence-utils'
 
 export const meteorShower: Scene = {
   id: 'meteor-shower',
   name: '流星群',
   category: 'sky',
 
-  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
-    const palette = distortPalette(
-      ['#050815', '#0D1428', '#1A2040', '#FFFFFF', '#B8D4FF'],
-      coherence, rng
-    )
-    const filterId = `distort-${seed}`
-    const filter = buildDistortionFilter(coherence, filterId, seed)
-
-    const texOpacity = ((1.0 - coherence) * 0.2).toFixed(2)
+  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
+    const palette = ['#050815', '#0D1428', '#1A2040', '#FFFFFF', '#B8D4FF']
 
     // Meteors: diagonal lines from upper-right to lower-left direction
-    const meteorCount = Math.floor(5 + coherence * 7)
+    const meteorCount = 12
     const meteors: string[] = []
     for (let i = 0; i < meteorCount; i++) {
-      const startX = jitter(W * 0.2 + rng() * W * 0.8, coherence, rng, W * 0.05)
-      const startY = jitter(rng() * H * 0.5, coherence, rng, H * 0.05)
-      const length = jitter(80 + rng() * 120, coherence, rng, 30)
-      const angle = jitter(Math.PI * 0.6, coherence, rng, 0.3)
+      const startX = W * 0.2 + rng() * W * 0.8
+      const startY = rng() * H * 0.5
+      const length = 80 + rng() * 120
+      const angle = Math.PI * 0.6
       const endX = startX - Math.cos(angle) * length
       const endY = startY + Math.sin(angle) * length
       const sw = (0.5 + rng() * 1.5).toFixed(1)
@@ -34,7 +26,7 @@ export const meteorShower: Scene = {
     }
 
     // Background stars
-    const starCount = Math.floor(30 + coherence * 20)
+    const starCount = 50
     const stars: string[] = []
     for (let i = 0; i < starCount; i++) {
       const sx = rng() * W
@@ -46,7 +38,6 @@ export const meteorShower: Scene = {
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
       <defs>
-        ${filter}
         <linearGradient id="sky-${seed}" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="${palette[0]}" />
           <stop offset="60%" stop-color="${palette[1]}" />
@@ -58,13 +49,9 @@ export const meteorShower: Scene = {
       <rect width="${W}" height="${H}" fill="url(#sky-${seed})" />
 
       <!-- Layer 2: Meteors - diagonal light lines -->
-      <g filter="url(#${filterId})">
+      <g>
         ${meteors.join('\n        ')}
       </g>
-
-      <!-- Layer 3: Texture overlay -->
-      <rect width="${W}" height="${H}" filter="url(#${filterId})"
-            fill="${palette[1]}" opacity="${texOpacity}" />
 
       <!-- Layer 4: Scattered background stars accent -->
       <g>

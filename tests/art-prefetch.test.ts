@@ -9,8 +9,7 @@ vi.mock('../src/lib/script-svg-executor', () => ({
   executeSvgScript: vi.fn(),
 }))
 vi.mock('../src/lib/scene-selector', () => ({
-  computeCoherence: vi.fn((round: number) => Math.max(0.1, 1.1 - round * 0.2)),
-  generateParams: vi.fn(() => ({ seed: 42, coherence: 0.9, sceneId: 'test-scene' })),
+  generateParams: vi.fn(() => ({ seed: 42, sceneId: 'test-scene' })),
 }))
 
 import { generateRound } from '../src/lib/svg-generator'
@@ -57,7 +56,7 @@ describe('startPrefetch', () => {
   it('returns PrefetchedRound with pending promise', () => {
     vi.mocked(generateRound).mockReturnValue(new Promise(() => {}))
 
-    const result = startPrefetch(2, 'ai-script', [])
+    const result = startPrefetch('ai-script', [])
     expect(result.params).toBeDefined()
     expect(result.params.sceneId).toBe('test-scene')
     expect(result.svgContent).toBeNull()
@@ -74,7 +73,7 @@ describe('startPrefetch', () => {
     })
     vi.mocked(executeSvgScript).mockReturnValue(mockSvg)
 
-    const result = startPrefetch(2, 'ai-script', [])
+    const result = startPrefetch('ai-script', [])
     await result.promise
 
     expect(result.svgContent).toBe(mockSvg)
@@ -85,7 +84,7 @@ describe('startPrefetch', () => {
   it('leaves svgContent null on API failure (fallback to classic)', async () => {
     vi.mocked(generateRound).mockRejectedValue(new Error('API error'))
 
-    const result = startPrefetch(2, 'ai-script', [])
+    const result = startPrefetch('ai-script', [])
     await result.promise
 
     expect(result.svgContent).toBeNull()
@@ -98,7 +97,7 @@ describe('startPrefetch', () => {
       fallback: true,
     })
 
-    const result = startPrefetch(2, 'ai-script', [])
+    const result = startPrefetch('ai-script', [])
     await result.promise
 
     expect(result.svgContent).toBeNull()
@@ -113,7 +112,7 @@ describe('startPrefetch', () => {
     vi.mocked(executeSvgScript).mockReturnValue(null)
 
     const themes = ['ocean', 'forest']
-    const result = startPrefetch(2, 'ai-script', themes)
+    const result = startPrefetch('ai-script', themes)
     await result.promise
 
     expect(generateRound).toHaveBeenCalledWith(expect.objectContaining({
@@ -124,7 +123,7 @@ describe('startPrefetch', () => {
   it('always uses script mode', async () => {
     vi.mocked(generateRound).mockResolvedValue({ content: '', fallback: true })
 
-    const result = startPrefetch(2, 'ai-script', [])
+    const result = startPrefetch('ai-script', [])
     await result.promise
 
     expect(generateRound).toHaveBeenCalledWith(expect.objectContaining({

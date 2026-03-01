@@ -9,7 +9,7 @@ describe('RemoteGameScreen', () => {
   it('accepts the correct prop types with myRole', () => {
     const _props: Parameters<typeof RemoteGameScreen>[0] = {
       round: 1,
-      params: { seed: 42, coherence: 0.9, sceneId: 'test' },
+      params: { seed: 42, sceneId: 'test' },
       myRole: 'host',
       matchCount: 0,
       isJudging: false,
@@ -24,7 +24,7 @@ describe('RemoteGameScreen', () => {
   it('accepts revealed guess props for judging phase display', () => {
     const _props: Parameters<typeof RemoteGameScreen>[0] = {
       round: 1,
-      params: { seed: 42, coherence: 0.9, sceneId: 'test' },
+      params: { seed: 42, sceneId: 'test' },
       myRole: 'guest',
       matchCount: 0,
       isJudging: true,

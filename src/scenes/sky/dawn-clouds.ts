@@ -1,29 +1,22 @@
 import type { Scene, SceneRenderParams } from '../../types'
-import { jitter, buildDistortionFilter, distortPalette } from '../../lib/coherence-utils'
 
 export const dawnClouds: Scene = {
   id: 'dawn-clouds',
   name: '夜明けの雲',
   category: 'sky',
 
-  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
-    const palette = distortPalette(
-      ['#1A0A1E', '#FF6B6B', '#FFB347', '#FFE4B5', '#87CEEB'],
-      coherence, rng
-    )
-    const filterId = `distort-${seed}`
-    const filter = buildDistortionFilter(coherence, filterId, seed)
+  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
+    const palette = ['#1A0A1E', '#FF6B6B', '#FFB347', '#FFE4B5', '#87CEEB']
 
-    const horizonY = jitter(H * 0.72, coherence, rng, H * 0.08)
-    const texOpacity = ((1.0 - coherence) * 0.25).toFixed(2)
+    const horizonY = H * 0.72
 
     // Generate cloud bands - horizontal flowing layers
     const bandCount = 4
     const bands: Array<{ y: number; h: number; color: string; op: number }> = []
     for (let i = 0; i < bandCount; i++) {
       const t = i / (bandCount - 1)
-      const bandY = jitter(H * 0.1 + t * H * 0.55, coherence, rng, H * 0.05)
-      const bandH = jitter(H * 0.1, coherence, rng, H * 0.04)
+      const bandY = H * 0.1 + t * H * 0.55
+      const bandH = H * 0.1
       const colorIdx = Math.floor(rng() * palette.length)
       bands.push({
         y: bandY,
@@ -39,17 +32,16 @@ export const dawnClouds: Scene = {
       const band = bands[i]
       const cloudCount = 2 + Math.floor(rng() * 3)
       for (let j = 0; j < cloudCount; j++) {
-        const cx = jitter((j + 0.5) * (W / cloudCount), coherence, rng, W * 0.1)
+        const cx = (j + 0.5) * (W / cloudCount)
         const cy = band.y + band.h * 0.5
-        const rx = jitter(W * 0.12, coherence, rng, W * 0.06)
-        const ry = jitter(band.h * 0.6, coherence, rng, band.h * 0.2)
+        const rx = W * 0.12
+        const ry = band.h * 0.6
         cloudEls.push(`<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="${band.color}" opacity="${band.op.toFixed(2)}" />`)
       }
     }
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
       <defs>
-        ${filter}
         <linearGradient id="sky-${seed}" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="${palette[0]}" />
           <stop offset="50%" stop-color="${palette[1]}" />
@@ -71,13 +63,9 @@ export const dawnClouds: Scene = {
       <rect y="${horizonY.toFixed(1)}" width="${W}" height="${(H - horizonY).toFixed(1)}" fill="url(#ground-${seed})" />
 
       <!-- Layer 2: Horizontal cloud bands -->
-      <g filter="url(#${filterId})">
+      <g>
         ${cloudEls.join('\n        ')}
       </g>
-
-      <!-- Layer 3: Texture overlay -->
-      <rect width="${W}" height="${H}" filter="url(#${filterId})"
-            fill="${palette[1]}" opacity="${texOpacity}" />
 
       <!-- Layer 4: Orange glow from horizon accent -->
       <rect y="${(horizonY - H * 0.2).toFixed(1)}" width="${W}" height="${(H * 0.2).toFixed(1)}"

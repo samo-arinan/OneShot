@@ -3,7 +3,7 @@
 ## コンセプト
 
 2人に同じ抽象画を見せて「何に見える？」と聞く。
-同じものが見えたら次のラウンドへ。ラウンドが進むほど絵は抽象的になる。
+同じものが見えたら次のラウンドへ。毎ラウンド異なるAI生成のアートワークが表示される。
 どこまで一致し続けられるか。
 
 **「One Shot」＝ 毎回一発勝負。同じものが見えるか？**
@@ -17,7 +17,6 @@
 - v6: ゲーム方式に全面刷新
   - プロフィール質問を廃止 → ニックネームのみ
   - ラウンド制（連続一致チャレンジ）
-  - 難易度カーブ（coherenceがラウンドごとに低下）
   - ビジュアル生成をフロント完結に（Canvas API）
   - API 1本化（judge のみ）
 - v7: 描画エンジンをモチーフベース方式に変更（Canvas API）
@@ -30,7 +29,6 @@
   - 新エンドポイント `POST /api/generate-svg`（`mistral-large-latest` 使用）
   - StartScreenにアートモード切り替え: "Classic"（48手書きシーン）vs "AI Script" / "AI Scene"（Mistral生成）
   - 2つのAIモード: Script（JSコード→SVG）とJSON（シーン記述→SVG）
-  - プロンプトベースのcoherence制御（抽象度をプロンプトで指示）
   - SVGバリデーション＆サニタイズ（dangerouslySetInnerHTML経由のXSS防止）
   - API障害時は自動的にClassicシーンにフォールバック
   - リモートモード: ホストがSVGを生成しPartyKit WebSocket経由で配布
@@ -57,7 +55,7 @@
   - `RoundResultScreen` でアートワークの下にLLMが選んだ短いテーマラベル（`params.theme`）を表示
   - テーマが存在する場合のみ表示（AI生成アート時）。クラシックシーンフォールバック時は非表示
 - **v14: SVG生成失敗時のリトライ**
-  - `art-prefetch.ts` に `generateSvgWithRetry(coherence, previousThemes)` 関数を追加
+  - `art-prefetch.ts` に `generateSvgWithRetry(previousThemes)` 関数を追加
   - SVG実行/バリデーション失敗またはAPIエラー時、最大2回の追加APIコール（計3回試行）でリトライ
   - 全リトライ試行後にのみクラシックシーンにフォールバック
   - 全SVG生成パス（先読み、LocalGameオンデマンド、RemoteGameオンデマンド）をこの関数に統一
@@ -69,6 +67,16 @@
   - **ゲスト（ルームコード付きURL）**: フルオンボーディングをスキップし、ゲスト参加画面に1行の簡易説明を初回のみインライン表示。「ルームに参加」ボタンでオンボーディング済みフラグも設定
   - 新i18nキー: `onboardingHeading`, `onboardingBody1-3`, `onboardingStart`, `onboardingBrief`
   - 新ファイル: `src/lib/onboarding.ts`, `src/components/OnboardingScreen.tsx`, `tests/onboarding.test.ts`
+- **v16: coherenceパラメータ削除 — 常に具象的なアートを生成**
+  - `VisualParams`, `GenerateRoundRequest`, `VisualParamsWire`, `SceneRenderParams` から `coherence` フィールドを削除
+  - `coherence-utils.ts` を削除（jitter, distortPath, buildDistortionFilter, distortPalette）。`svg-utils.ts` にリネームし `ridgePointsToPath` のみ残す
+  - `scene-selector.ts` から `computeCoherence` を削除。`generateParams` は `{ seed, sceneId }` のみ返す
+  - `svg-generator.ts` から `coherenceToPromptHint` を削除
+  - `api/generate-svg.js` は常に具体的で認識可能な主題を要求（抽象度の段階なし）
+  - `generateSvgWithRetry(previousThemes)` — coherenceパラメータなし
+  - `startPrefetch(artMode, previousThemes)` — roundやcoherenceパラメータなし
+  - 全48シーンのrender関数を簡略化: パラメータからcoherence削除、jitter/distortPath/distortPalette/buildDistortionFilter呼び出しを除去
+  - クラシックシーンはフルフィデリティでレンダリング（フォールバック専用、歪みなし）
 
 ---
 
@@ -81,8 +89,8 @@
 
     ↓
 
-[Round 1] coherence高め（何かに見える絵）
-  抽象画がドンと表示
+[Round 1]
+  AI生成アートがドンと表示
   2人が「何に見える？」を入力
   → 一致判定
 
@@ -91,8 +99,8 @@
 
     ↓
 
-[Round 2] 少し抽象的に
-  新しい抽象画が表示
+[Round 2]
+  新しいAI生成アートが表示
   2人が「何に見える？」を入力
   → 一致判定
 
@@ -101,8 +109,8 @@
 
     ↓
 
-[Round 3+] さらに抽象的に...
-  （繰り返し。ラウンドが進むほど難しくなる）
+[Round 3+]
+  （繰り返し。毎ラウンド異なるアートワークが表示される）
 
     ↓
 
@@ -123,23 +131,11 @@
 - 毎ラウンド: 抽象画表示 → 2人が自由テキスト入力 → LLMが一致判定
 - 一致 → 次のラウンド、不一致 → ゲーム終了
 - **連続一致回数**がスコア（数値スコア0-100は出さない）
-- ラウンドごとに抽象度が上がり、一致が難しくなる
-
-### 難易度カーブ
-
-```
-Round 1: coherence 0.9 — かなり何かに見える（風景、物体が浮かぶ）
-Round 2: coherence 0.7 — まあ何かに見える（解釈は分かれ始める）
-Round 3: coherence 0.5 — 曖昧（複数の解釈が可能）
-Round 4: coherence 0.3 — かなり抽象的（意見が割れやすい）
-Round 5+: coherence 0.1 — ほぼカオス（一致したら奇跡）
-```
 
 ### ビジュアル生成
-- **SVGシーン方式**: シーン定義 → フロントでSVG生成・表示
-- 各シーンは構図＋配色＋描画ロジックを1セットで持つ
-- coherenceパラメータで構図の明瞭さ↔崩しを制御
-- **LLMはビジュアル生成に関与しない** → フロント完結（API節約）
+- **AI生成SVG**が主要な生成方式: Mistral APIでラウンドごとにユニークなSVGアートを生成
+- クラシックシーン（48種）はAPI障害時のフォールバックとして使用
+- 毎ラウンド具体的で認識可能なアートワークを生成（抽象度の段階なし）
 
 ### 一致判定
 - LLM（Mistral API）が2人の回答の意味的近さを判定
@@ -358,7 +354,6 @@ LLMが毎回自由にテーマを選択し、`previousThemes`で重複を回避�
 Request:
 {
   mode: "script",               // JSコード→SVG（唯一のモード）
-  coherence: number,            // 0.0-1.0、抽象度を制御
   previousThemes?: string[],    // 使用済みテーマ（回避用）
   lang?: "en" | "ja"
 }
@@ -375,12 +370,7 @@ Response:
 - Temperature: 0.9（高い創造性）
 - max_tokens: 2048（1ラウンドのみ）
 - SVG制約: viewBox 0 0 360 360、テキスト/script/イベントハンドラ禁止
-- Coherenceマッピング:
-  - 0.8+: はっきりと認識できるシーン
-  - 0.6-0.8: やや抽象的、スタイライズ
-  - 0.4-0.6: 曖昧、複数の解釈可能
-  - 0.2-0.4: 高度に抽象的、断片的
-  - <0.2: カオスな視覚ノイズ
+- 常に具体的で認識可能な主題を要求（抽象度の段階なし）
 - セキュリティ: SVGバリデーションで`<script>`、`on*`属性、`javascript:` URIを拒否
 - バックグラウンド先読み: ラウンドN中にN+1を事前生成
 
@@ -390,16 +380,13 @@ Response:
 
 ### 設計思想
 
-シーン＝「構図＋配色＋描画ロジック」を1セットにした描画テンプレート。
-ラウンドごとにランダムにシーンを選択し、coherenceパラメータで構図の明瞭さを制御する。
+AI生成SVGが主要な描画方式。クラシックシーン（48種）はAPI障害時のフォールバックとして使用。
 
-- Round 1（coherence 0.9）: シーンの構図がはっきり見える → 「あ、山だ」
-- Round 5（coherence 0.1）: 構図が崩壊 → 「何これw」
+クラシックシーン＝「構図＋配色＋描画ロジック」を1セットにした描画テンプレート。
+フォールバック時はフルフィデリティでレンダリング（歪みなし）。
 
 SVG を採用する理由:
 - 宣言的に構図を記述でき、シーン追加が容易
-- 座標・パラメータにジッターを加えるだけでcoherenceの崩しが実現できる
-- SVGフィルタ（feTurbulence, feGaussianBlur, feDisplacementMap）でにじみ・歪みを表現可能
 - DOMとして扱えるのでReactとの統合がスムーズ
 
 ### コア型定義
@@ -409,7 +396,6 @@ SVG を採用する理由:
 
 interface VisualParams {
   seed: number;           // ランダムシード（再現性のため）
-  coherence: number;      // 0.0-1.0（ラウンドに応じて下がる）
   sceneId: string;        // 選択されたシーンのID
 }
 
@@ -424,7 +410,6 @@ interface SceneRenderParams {
   width: number;          // SVG幅（px）
   height: number;         // SVG高さ（px）
   seed: number;
-  coherence: number;
   rng: () => number;      // seeded random
 }
 
@@ -442,15 +427,14 @@ type SceneCategory =
 ```typescript
 // scene-selector.ts
 
-function generateParams(round: number, previousSceneIds: string[], scenes: Scene[]): VisualParams {
+function generateParams(previousSceneIds: string[], scenes: Scene[]): VisualParams {
   const seed = Math.floor(Math.random() * 100000);
   const rng = seededRandom(seed);
-  const coherence = Math.max(0.1, 1.0 - (round - 1) * 0.2);
 
   // 直前2ラウンドと同じシーン、同じカテゴリを避ける
   const scene = selectScene(rng, previousSceneIds, scenes);
 
-  return { seed, coherence, sceneId: scene.id };
+  return { seed, sceneId: scene.id };
 }
 
 function selectScene(rng: RNG, excludeIds: string[], scenes: Scene[]): Scene {
@@ -466,179 +450,59 @@ function selectScene(rng: RNG, excludeIds: string[], scenes: Scene[]): Scene {
 
 ```
 Layer 1: 背景（グラデーション、放射状、単色）
-  → シーンの「空気感」を決める。coherenceが下がると色境界がぼやける
+  → シーンの「空気感」を決める
 
 Layer 2: 主形状（シルエット、稜線、円形など）
-  → シーンの「何に見えるか」を決める核。coherenceが下がると形が崩れる
+  → シーンの「何に見えるか」を決める核
 
 Layer 3: テクスチャ（SVGフィルタによるにじみ・ノイズ）
-  → coherenceが下がると強くなり、主形状を覆い隠す
+  → 表面の質感を表現
 
 Layer 4: アクセント（光源、ハイライト、グロウ）
-  → coherenceが高いと月・太陽などの目印になる。低いと歪む
-```
-
-### coherenceによる崩し方（全シーン共通ルール）
-
-```
-coherence: 0.9（Round 1）
-  主形状  → シーンの構図がはっきりわかる
-  座標    → ジッターほぼゼロ
-  フィルタ → feTurbulence弱、feGaussianBlur最小
-  パレット → シーン定義どおり、2-3色で統一
-  → 「あ、山だ」「海っぽい」と多くの人が同じものを見る
-
-coherence: 0.7（Round 2）
-  主形状  → 認識できるが、やや曖昧
-  座標    → 制御点に小さなジッター追加
-  フィルタ → にじみが出始める
-  パレット → 1-2色追加、やや逸脱
-  → 「山…かな？丘かも」レベル
-
-coherence: 0.5（Round 3）
-  主形状  → 痕跡はあるが別解釈も可能
-  座標    → ジッター中程度
-  フィルタ → テクスチャが存在感を持つ
-  パレット → 色相差が広がる、意外な色が混入
-  → 「波にも見えるし、砂漠にも見える」レベル
-
-coherence: 0.3（Round 4）
-  主形状  → 元のシーンはほぼ判別不能
-  座標    → 制御点が大きく暴れる
-  フィルタ → 支配的、形を覆い隠す
-  パレット → 不調和、補色が衝突
-  → 「何か…雰囲気は感じるけど…」レベル
-
-coherence: 0.1（Round 5+）
-  主形状  → 完全崩壊
-  座標    → 最大ジッター
-  フィルタ → 最大
-  パレット → カオス
-  → 「もう雰囲気で答えるしかないw」レベル
-```
-
-### coherence崩しの実装パターン
-
-```typescript
-// coherence-utils.ts
-
-// === 座標ジッター ===
-// coherenceが下がるほど座標がランダムにズレる
-function jitter(value: number, coherence: number, rng: RNG, maxOffset: number): number {
-  const noise = (rng() - 0.5) * 2 * maxOffset * (1.0 - coherence);
-  return value + noise;
-}
-
-// === パスポイントの崩し ===
-// ベジェ曲線の制御点にジッターを適用
-function distortPath(points: Point[], coherence: number, rng: RNG): Point[] {
-  return points.map(p => ({
-    x: jitter(p.x, coherence, rng, 50),
-    y: jitter(p.y, coherence, rng, 50),
-  }));
-}
-
-// === SVGフィルタ生成 ===
-// coherenceに応じたfeTurbulence + feDisplacementMap
-function buildDistortionFilter(coherence: number, filterId: string, seed: number): string {
-  const turbFreq = lerp(0.0, 0.04, 1.0 - coherence);   // 0（なし）〜 0.04（激しい）
-  const turbOctaves = Math.ceil(lerp(1, 5, 1.0 - coherence));
-  const dispScale = lerp(0, 60, 1.0 - coherence);       // 0（なし）〜 60（大きく歪む）
-  const blurRadius = lerp(0, 8, 1.0 - coherence);
-
-  return `
-    <filter id="${filterId}" x="-20%" y="-20%" width="140%" height="140%">
-      <feTurbulence type="fractalNoise"
-        baseFrequency="${turbFreq}"
-        numOctaves="${turbOctaves}"
-        seed="${seed}"
-        result="noise" />
-      <feDisplacementMap in="SourceGraphic" in2="noise"
-        scale="${dispScale}"
-        xChannelSelector="R" yChannelSelector="G" />
-      <feGaussianBlur stdDeviation="${blurRadius}" />
-    </filter>
-  `;
-}
-
-// === 色の崩し ===
-// coherenceが下がると、パレットに異質な色を混入
-function distortPalette(
-  baseColors: string[],
-  coherence: number,
-  rng: RNG
-): string[] {
-  if (coherence > 0.7) return baseColors;
-
-  const mutated = [...baseColors];
-  const extraCount = Math.floor((1.0 - coherence) * 3);
-  for (let i = 0; i < extraCount; i++) {
-    const randomHue = Math.floor(rng() * 360);
-    mutated.push(`hsl(${randomHue}, ${50 + rng() * 30}%, ${30 + rng() * 40}%)`);
-  }
-  return mutated;
-}
-
-// === ユーティリティ ===
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * Math.max(0, Math.min(1, t));
-}
-
-function seededRandom(seed: number): () => number { /* ... */ }
+  → 月・太陽などの目印
 ```
 
 ### シーン定義フォーマット
 
 各シーンは以下の構造で定義する。
-`render` 関数がSVG文字列を返す。coherenceに応じた崩しは共通ユーティリティを使う。
+`render` 関数がSVG文字列を返す。フォールバック時にフルフィデリティでレンダリング。
 
 ```typescript
 // scenes/fuji-moonlight.ts
 
 import { Scene, SceneRenderParams } from '../types';
-import { jitter, distortPath, buildDistortionFilter, distortPalette } from '../coherence-utils';
+import { ridgePointsToPath } from '../svg-utils';
 
 export const fujiMoonlight: Scene = {
   id: "fuji-moonlight",
   name: "月夜の富士",
   category: "landscape",
 
-  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
-    const palette = distortPalette(
-      ["#1B3A5C", "#0D1B2A", "#2C2C2C", "#C9A959", "#F5F0E8"],
-      coherence, rng
-    );
-    const filterId = `distort-${seed}`;
-    const filter = buildDistortionFilter(coherence, filterId);
+  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
+    const palette = ["#1B3A5C", "#0D1B2A", "#2C2C2C", "#C9A959", "#F5F0E8"];
 
     // --- Layer 1: 背景（夜空のグラデーション）---
-    const horizonY = jitter(H * 0.55, coherence, rng, H * 0.15);
+    const horizonY = H * 0.55;
 
     // --- Layer 2: 主形状（山のシルエット）---
-    // 三角形ベースの稜線。左右非対称、右肩やや下がり
-    const peakX = jitter(W * 0.45, coherence, rng, W * 0.1);
-    const peakY = jitter(H * 0.2, coherence, rng, H * 0.1);
-    const ridgePoints = distortPath([
+    const peakX = W * 0.45;
+    const peakY = H * 0.2;
+    const ridgePoints = [
       { x: 0, y: horizonY },
       { x: W * 0.2, y: horizonY - H * 0.05 },
       { x: peakX, y: peakY },
       { x: W * 0.7, y: horizonY - H * 0.03 },
       { x: W, y: horizonY + H * 0.02 },
-    ], coherence, rng);
-
-    // --- Layer 3: テクスチャ（SVGフィルタで適用）---
-    // filterをシルエットグループに適用
+    ];
 
     // --- Layer 4: アクセント（月）---
-    const moonX = jitter(W * 0.78, coherence, rng, W * 0.1);
-    const moonY = jitter(H * 0.15, coherence, rng, H * 0.08);
-    const moonR = jitter(25, coherence, rng, 10);
-    const showMoon = coherence > 0.5 || rng() > 0.7;
+    const moonX = W * 0.78;
+    const moonY = H * 0.15;
+    const moonR = 25;
 
     return `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
         <defs>
-          ${filter}
           <linearGradient id="sky-${seed}" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="${palette[1]}" />
             <stop offset="${(horizonY / H * 100).toFixed(1)}%" stop-color="${palette[0]}" />
@@ -658,41 +522,18 @@ export const fujiMoonlight: Scene = {
         <rect y="${horizonY}" width="${W}" height="${H - horizonY}" fill="url(#ground-${seed})" />
 
         <!-- Layer 2: 山のシルエット -->
-        <g filter="url(#${filterId})">
-          <path d="${ridgePointsToPath(ridgePoints, W, H)}"
-                fill="${palette[2]}" opacity="0.9" />
-        </g>
-
-        <!-- Layer 3: テクスチャオーバーレイ -->
-        <!-- feTurbulenceベースのノイズ矩形（coherence低で不透明度UP） -->
-        <rect width="${W}" height="${H}" filter="url(#${filterId})"
-              fill="${palette[0]}" opacity="${((1.0 - coherence) * 0.3).toFixed(2)}" />
+        <path d="${ridgePointsToPath(ridgePoints, W, H)}"
+              fill="${palette[2]}" opacity="0.9" />
 
         <!-- Layer 4: 月 -->
-        ${showMoon ? `
-          <circle cx="${moonX}" cy="${moonY}" r="${moonR * 2.5}"
-                  fill="url(#moon-glow-${seed})" />
-          <circle cx="${moonX}" cy="${moonY}" r="${moonR}"
-                  fill="${palette[4]}" opacity="0.85" />
-        ` : ''}
+        <circle cx="${moonX}" cy="${moonY}" r="${moonR * 2.5}"
+                fill="url(#moon-glow-${seed})" />
+        <circle cx="${moonX}" cy="${moonY}" r="${moonR}"
+                fill="${palette[4]}" opacity="0.85" />
       </svg>
     `;
   }
 };
-
-// パス変換ヘルパー
-function ridgePointsToPath(points: Point[], W: number, H: number): string {
-  // pointsからベジェ曲線パスを生成し、下端で閉じる
-  let d = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 1; i < points.length; i++) {
-    const prev = points[i - 1];
-    const curr = points[i];
-    const cpx = (prev.x + curr.x) / 2;
-    d += ` Q ${cpx} ${prev.y} ${curr.x} ${curr.y}`;
-  }
-  d += ` L ${W} ${H} L 0 ${H} Z`;
-  return d;
-}
 ```
 
 ### シーン一覧（40-50種）
@@ -807,8 +648,8 @@ function AbstractArt({ params, width = 600, height = 400, className = '' }: Prop
     const scene = SCENE_REGISTRY.find(s => s.id === params.sceneId);
     if (!scene) return '';
     const rng = seededRandom(params.seed);
-    return scene.render({ width, height, seed: params.seed, coherence: params.coherence, rng });
-  }, [params.svgContent, params.seed, params.coherence, params.sceneId, width, height]);
+    return scene.render({ width, height, seed: params.seed, rng });
+  }, [params.svgContent, params.seed, params.sceneId, width, height]);
 
   const dataUri = useMemo(() => {
     if (!svgString) return '';
@@ -840,7 +681,7 @@ function AbstractArt({ params, width = 600, height = 400, className = '' }: Prop
 ```typescript
 interface RoundRecord {
   round: number;
-  params: VisualParams;    // seed, coherence, sceneId → 再描画可能
+  params: VisualParams;    // seed, sceneId → 再描画可能
   guessA: string;
   guessB: string;
   match: MatchResult;
@@ -1008,23 +849,20 @@ Server → Client: `room_state`, `player_joined`, `round_start`, `round_art_upda
 
 ```
 Phase 1 (最初の2-3時間): SVGシーンエンジンの実装・検証
-  - 共通ユーティリティ実装（seededRandom, jitter, distortPath, buildDistortionFilter）
+  - 共通ユーティリティ実装（seededRandom, ridgePointsToPath）
   - シーン定義フォーマットの確定
   - シーン3つを先行実装（最小検証セット）
     - "fuji-moonlight"（風景系）— 最も「何かに見える」を出しやすい
     - "calm-ocean"（水系）— 水平線＋波で構図バリエーション確認
     - "concentric-eye"（抽象系）— 非風景系の検証
-  - coherence 0.9 / 0.5 / 0.1 で各シーンを確認
-    → Round 1 (0.9) で「何かに見える」ならOK
-    → Round 3 (0.5) で解釈が割れ始めればOK
-    → Round 5 (0.1) で「わからんw」ならOK
+  - 各シーンがフルフィデリティで正しくレンダリングされることを確認
   - 検証OKなら残りシーンを追加実装
 
 Phase 2 (次の4-5時間): ローカルモードで動くもの
   - Vite + React + Tailwind セットアップ
   - スタート画面（ニックネーム入力）
   - ゲームループ（ラウンド進行）
-  - SVG描画（ラウンドごとにcoherenceダウン）
+  - SVG描画（AI生成 + クラシックシーンフォールバック）
   - 「何に見える？」入力UI
   - POST /api/judge（Vercel Functions → Mistral API）
   - ラウンド結果表示（一致/不一致）

@@ -48,21 +48,19 @@ describe('types', () => {
     expect(Object.keys(levels)).toHaveLength(4)
   })
 
-  it('VisualParams has seed, coherence, sceneId', () => {
+  it('VisualParams has seed and sceneId', () => {
     const params: VisualParams = {
       seed: 42,
-      coherence: 0.9,
       sceneId: 'test-scene',
     }
     expect(params.seed).toBe(42)
-    expect(params.coherence).toBe(0.9)
     expect(params.sceneId).toBe('test-scene')
   })
 
   it('RoundRecord includes params as VisualParams', () => {
     const record: RoundRecord = {
       round: 1,
-      params: { seed: 42, coherence: 0.9, sceneId: 'test' },
+      params: { seed: 42, sceneId: 'test' },
       guessA: 'mountain',
       guessB: 'hill',
       match: 'close',
@@ -75,7 +73,7 @@ describe('types', () => {
     const state: GameState = {
       phase: 'start',
       currentRound: 0,
-      currentParams: { seed: 0, coherence: 1, sceneId: '' },
+      currentParams: { seed: 0, sceneId: '' },
       previousSceneIds: [],
       history: [],
       lastResult: null,

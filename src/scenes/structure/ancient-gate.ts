@@ -1,29 +1,23 @@
 import type { Scene, SceneRenderParams } from '../../types'
-import { jitter, buildDistortionFilter, distortPalette } from '../../lib/coherence-utils'
 
 export const ancientGate: Scene = {
   id: 'ancient-gate',
   name: '古代の門',
   category: 'structure',
 
-  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
-    const palette = distortPalette(
-      ['#3D2B1F', '#1A0E08', '#7A5C3A', '#D4B896', '#F5E6C8'],
-      coherence, rng
-    )
-    const filterId = `distort-${seed}`
-    const filter = buildDistortionFilter(coherence, filterId, seed)
+  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
+    const palette = ['#3D2B1F', '#1A0E08', '#7A5C3A', '#D4B896', '#F5E6C8']
 
     // Layer 1: Background - distant sky through the gate opening
-    const bgMidPct = jitter(50, coherence, rng, 10).toFixed(1)
+    const bgMidPct = (50).toFixed(1)
 
     // Layer 2: Gate opening - central trapezoid space
     // The opening is trapezoidal: wider at bottom, narrower at top
-    const openingTopW = jitter(W * 0.22, coherence, rng, W * 0.04)
-    const openingBotW = jitter(W * 0.3, coherence, rng, W * 0.04)
-    const openingTopY = jitter(H * 0.15, coherence, rng, H * 0.05)
-    const openingBotY = jitter(H * 0.82, coherence, rng, H * 0.04)
-    const cx = jitter(W * 0.5, coherence, rng, W * 0.04)
+    const openingTopW = W * 0.22
+    const openingBotW = W * 0.3
+    const openingTopY = H * 0.15
+    const openingBotY = H * 0.82
+    const cx = W * 0.5
 
     const openingTopLeft = cx - openingTopW / 2
     const openingTopRight = cx + openingTopW / 2
@@ -31,22 +25,18 @@ export const ancientGate: Scene = {
     const openingBotRight = cx + openingBotW / 2
 
     // Left wall covers left of scene to gate opening
-    const wallTop = jitter(H * 0.05, coherence, rng, H * 0.04)
+    const wallTop = H * 0.05
 
     // Lintel (top horizontal slab)
-    const lintelH = jitter(H * 0.07, coherence, rng, H * 0.02)
+    const lintelH = H * 0.07
     const lintelTop = openingTopY - lintelH
-    const lintelOverhang = jitter(W * 0.05, coherence, rng, W * 0.02)
-
-    // Layer 3: Texture
-    const texOpacity = ((1.0 - coherence) * 0.3).toFixed(2)
+    const lintelOverhang = W * 0.05
 
     // Layer 4: Light through gate
-    const lightR = jitter(W * 0.18, coherence, rng, W * 0.04)
+    const lightR = W * 0.18
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
         <defs>
-          ${filter}
           <linearGradient id="distant-${seed}" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="${palette[4]}" stop-opacity="0.9" />
             <stop offset="${bgMidPct}%" stop-color="${palette[3]}" stop-opacity="0.7" />
@@ -71,7 +61,6 @@ export const ancientGate: Scene = {
                  fill="url(#gatelight-${seed})" />
 
         <!-- Layer 2: Dark walls blocking the sides -->
-        <g filter="url(#${filterId})">
           <!-- Left wall -->
           <polygon points="0,${wallTop.toFixed(1)} ${openingTopLeft.toFixed(1)},${openingTopY.toFixed(1)} ${openingBotLeft.toFixed(1)},${openingBotY.toFixed(1)} 0,${H}"
                    fill="url(#wall-${seed})" opacity="0.97" />
@@ -89,11 +78,6 @@ export const ancientGate: Scene = {
           <rect x="${openingBotLeft.toFixed(1)}" y="${openingBotY.toFixed(1)}"
                 width="${openingBotW.toFixed(1)}" height="${(H - openingBotY).toFixed(1)}"
                 fill="${palette[0]}" opacity="0.4" />
-        </g>
-
-        <!-- Layer 3: Texture overlay -->
-        <rect width="${W}" height="${H}" filter="url(#${filterId})"
-              fill="${palette[0]}" opacity="${texOpacity}" />
       </svg>`
   },
 }
