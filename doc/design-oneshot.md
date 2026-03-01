@@ -56,6 +56,19 @@ How long can they keep matching?
 - **v13: Show theme on round result screen**
   - `RoundResultScreen` displays `params.theme` (the LLM-chosen short theme label) below the artwork
   - Only shown when theme exists (AI-generated art); hidden for classic scene fallback
+- **v14: SVG generation retry on failure**
+  - New `generateSvgWithRetry(coherence, previousThemes)` function in `art-prefetch.ts`
+  - On SVG execution/validation failure or API error, retries API call up to 2 additional times (3 attempts total)
+  - Falls back to classic scene only after all retry attempts are exhausted
+  - All SVG generation paths (prefetch, LocalGame on-demand, RemoteGame on-demand) unified through this function
+  - Removes direct `generateRound` + `convertRoundToSvg` usage from game components
+- **v15: First-launch onboarding screen**
+  - New `OnboardingScreen` component: full-screen game explanation shown before StartScreen on first visit
+  - `localStorage` flag (`oneshot_onboarded`) tracks whether onboarding has been seen
+  - **Host / direct access**: Full onboarding with heading, 3-line explanation, and "Got it" button
+  - **Guest (URL with room code)**: Skips full onboarding; instead, a brief 1-line game description is shown inline on the guest join screen (first visit only). "Join Room" button also marks onboarding as seen
+  - New i18n keys: `onboardingHeading`, `onboardingBody1-3`, `onboardingStart`, `onboardingBrief`
+  - New files: `src/lib/onboarding.ts`, `src/components/OnboardingScreen.tsx`, `tests/onboarding.test.ts`
 
 ---
 

@@ -1,4 +1,5 @@
 import { t } from '../lib/i18n'
+import { hasSeenOnboarding, markOnboardingSeen } from '../lib/onboarding'
 
 interface StartScreenProps {
   onStart: () => void
@@ -8,15 +9,23 @@ interface StartScreenProps {
 }
 
 export function StartScreen({ onStart, onCreateRoom, onJoinRoom, roomCodeFromUrl }: StartScreenProps) {
-  // Guest join form: just room code + join button
+  // Guest join form: room code + brief explanation (first visit) + join button
   if (roomCodeFromUrl && onJoinRoom) {
+    const isFirstVisit = !hasSeenOnboarding()
+    const handleJoin = () => {
+      markOnboardingSeen()
+      onJoinRoom()
+    }
     return (
       <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col items-center justify-center p-6">
         <h1 className="text-5xl font-bold mb-2 tracking-tight">ONE SHOT</h1>
         <p className="text-gray-400 mb-2 text-center">{t().tagline}</p>
+        {isFirstVisit && (
+          <p className="text-gray-500 text-sm mb-2 text-center">{t().onboardingBrief}</p>
+        )}
         <p className="text-blue-400 text-sm mb-8">{t().roomCode}: {roomCodeFromUrl}</p>
         <button
-          onClick={onJoinRoom}
+          onClick={handleJoin}
           className="w-full max-w-sm bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-medium transition-colors cursor-pointer"
         >
           {t().joinRoom}

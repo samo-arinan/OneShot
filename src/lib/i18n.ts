@@ -42,6 +42,12 @@ export interface Messages {
   artModeScript: string
   artModeJson: string
   aiArtUnavailable: string
+  onboardingHeading: string
+  onboardingBody1: string
+  onboardingBody2: string
+  onboardingBody3: string
+  onboardingStart: string
+  onboardingBrief: string
 }
 
 const ja: Messages = {
@@ -86,6 +92,12 @@ const ja: Messages = {
   artModeScript: 'AI Script',
   artModeJson: 'AI Scene',
   aiArtUnavailable: 'AI Art が利用できませんでした。Classic モードで表示しています。',
+  onboardingHeading: '遊び方',
+  onboardingBody1: '2人で同じ抽象アートを見て「何に見える？」を答えるゲーム。',
+  onboardingBody2: '答えが一致すれば次のラウンドへ。ラウンドが進むほど絵は抽象的に。',
+  onboardingBody3: '答えが合わなくなったらゲーム終了。何ラウンド続けられるか挑戦しよう。',
+  onboardingStart: 'はじめる',
+  onboardingBrief: '同じ絵を見て「何に見える？」を答え合うゲーム',
 }
 
 const en: Messages = {
@@ -130,6 +142,12 @@ const en: Messages = {
   artModeScript: 'AI Script',
   artModeJson: 'AI Scene',
   aiArtUnavailable: 'AI Art unavailable. Showing classic artwork.',
+  onboardingHeading: 'How to Play',
+  onboardingBody1: 'Two players view the same abstract artwork and answer: "What does this look like?"',
+  onboardingBody2: 'If your answers match, you advance. Each round, the artwork gets more abstract.',
+  onboardingBody3: 'When you disagree, the game ends. How long can you keep the streak going?',
+  onboardingStart: 'Got it',
+  onboardingBrief: 'See the same artwork, guess what it looks like — match answers to keep going',
 }
 
 const messages: Record<Locale, Messages> = { en, ja }

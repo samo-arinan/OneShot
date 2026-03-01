@@ -56,6 +56,19 @@
 - **v13: ラウンド結果画面にテーマ表示**
   - `RoundResultScreen` でアートワークの下にLLMが選んだ短いテーマラベル（`params.theme`）を表示
   - テーマが存在する場合のみ表示（AI生成アート時）。クラシックシーンフォールバック時は非表示
+- **v14: SVG生成失敗時のリトライ**
+  - `art-prefetch.ts` に `generateSvgWithRetry(coherence, previousThemes)` 関数を追加
+  - SVG実行/バリデーション失敗またはAPIエラー時、最大2回の追加APIコール（計3回試行）でリトライ
+  - 全リトライ試行後にのみクラシックシーンにフォールバック
+  - 全SVG生成パス（先読み、LocalGameオンデマンド、RemoteGameオンデマンド）をこの関数に統一
+  - ゲームコンポーネントからの `generateRound` + `convertRoundToSvg` の直接呼び出しを除去
+- **v15: 初回起動時オンボーディング画面**
+  - 新コンポーネント `OnboardingScreen`: 初回訪問時にStartScreenの前にゲーム説明画面を表示
+  - `localStorage` フラグ（`oneshot_onboarded`）でオンボーディング表示済みかを管理
+  - **ホスト／直接アクセス**: 見出し・3行説明・「はじめる」ボタンのフルオンボーディング
+  - **ゲスト（ルームコード付きURL）**: フルオンボーディングをスキップし、ゲスト参加画面に1行の簡易説明を初回のみインライン表示。「ルームに参加」ボタンでオンボーディング済みフラグも設定
+  - 新i18nキー: `onboardingHeading`, `onboardingBody1-3`, `onboardingStart`, `onboardingBrief`
+  - 新ファイル: `src/lib/onboarding.ts`, `src/components/OnboardingScreen.tsx`, `tests/onboarding.test.ts`
 
 ---
 

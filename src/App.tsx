@@ -1,8 +1,10 @@
 import { useMemo, useState, useCallback } from 'react'
 import { LocalGame } from './components/LocalGame'
 import { RemoteGame } from './components/RemoteGame'
+import { OnboardingScreen } from './components/OnboardingScreen'
 import { parseRoomFromUrl } from './lib/room-code'
 import { generateRoomCode } from './lib/room-code'
+import { hasSeenOnboarding } from './lib/onboarding'
 import type { PlayerRole } from './types'
 
 interface RemoteSession {
@@ -13,6 +15,7 @@ interface RemoteSession {
 export default function App() {
   const roomCodeFromUrl = useMemo(() => parseRoomFromUrl(), [])
   const [remoteSession, setRemoteSession] = useState<RemoteSession | null>(null)
+  const [showOnboarding, setShowOnboarding] = useState(() => !roomCodeFromUrl && !hasSeenOnboarding())
 
   const createRoom = useCallback(() => {
     setRemoteSession({
@@ -34,6 +37,10 @@ export default function App() {
     setRemoteSession(null)
     window.history.replaceState(null, '', '/')
   }, [])
+
+  if (showOnboarding) {
+    return <OnboardingScreen onDone={() => setShowOnboarding(false)} />
+  }
 
   if (remoteSession) {
     return (
