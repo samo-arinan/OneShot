@@ -53,6 +53,9 @@ How long can they keep matching?
 - **v12: Share & save improvements**
   - **Share text includes game URL**: `GAME_URL` constant appended to share message (`buildShareText` in `share.ts`)
   - **SVG long-press save**: `AbstractArt` renders as `<img>` with `data:image/svg+xml` URI instead of `dangerouslySetInnerHTML` div — enables native mobile long-press to save/copy images
+- **v13: Show theme on round result screen**
+  - `RoundResultScreen` displays `params.theme` (the LLM-chosen short theme label) below the artwork
+  - Only shown when theme exists (AI-generated art); hidden for classic scene fallback
 
 ---
 
@@ -200,6 +203,9 @@ Round 5+: coherence 0.1 — near chaos (matching would be a miracle)
 │                           │
 │  You see it!              │
 │                           │
+│  [art 200x200 60%]        │
+│  "Ocean Wave Pattern"     │
+│                           │
 │  Player 1: "sunset sea"   │
 │  Player 2: "evening beach"│
 │                           │
@@ -212,6 +218,9 @@ Round 5+: coherence 0.1 — near chaos (matching would be a miracle)
 ┌──────────────────────────┐
 │                           │
 │  That's it!               │
+│                           │
+│  [art 200x200 60%]        │
+│  "Volcanic Sunset"        │
 │                           │
 │  Player 1: "fire"         │
 │  Player 2: "whale"        │

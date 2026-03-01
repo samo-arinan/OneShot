@@ -49,8 +49,12 @@ export function RoundResultScreen({
         params={record.params}
         width={200}
         height={200}
-        className="mb-4 opacity-60"
+        className="mb-2 opacity-60"
       />
+
+      {record.params.theme && (
+        <div className="text-sm text-gray-500 mb-4">{record.params.theme}</div>
+      )}
 
       <div className="bg-gray-900 rounded-lg p-4 mb-4 w-full max-w-sm">
         <div className="flex justify-between items-center mb-2">

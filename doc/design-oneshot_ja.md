@@ -53,6 +53,9 @@
 - **v12: シェア＆保存改善**
   - **シェアテキストにゲームURL追加**: `GAME_URL` 定数をシェアメッセージに付加（`share.ts` の `buildShareText`）
   - **SVG長押し保存**: `AbstractArt` を `dangerouslySetInnerHTML` の div から `<img>` タグ + `data:image/svg+xml` URI に変更 — モバイルのネイティブ長押しで画像保存・コピーが可能に
+- **v13: ラウンド結果画面にテーマ表示**
+  - `RoundResultScreen` でアートワークの下にLLMが選んだ短いテーマラベル（`params.theme`）を表示
+  - テーマが存在する場合のみ表示（AI生成アート時）。クラシックシーンフォールバック時は非表示
 
 ---
 
@@ -199,6 +202,9 @@ Round 5+: coherence 0.1 — ほぼカオス（一致したら奇跡）
 │                           │
 │  🎯 見えてる！              │
 │                           │
+│  [art 200x200 60%]        │
+│  "Ocean Wave Pattern"     │
+│                           │
 │  Player 1: 「夕焼けの海」  │
 │  Player 2: 「夕暮れのビーチ」│
 │                           │
@@ -211,6 +217,9 @@ Round 5+: coherence 0.1 — ほぼカオス（一致したら奇跡）
 ┌──────────────────────────┐
 │                           │
 │  💥 ここまで！              │
+│                           │
+│  [art 200x200 60%]        │
+│  "Volcanic Sunset"        │
 │                           │
 │  Player 1: 「炎」          │
 │  Player 2: 「クジラ」       │
