@@ -142,6 +142,10 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
         else if (rs.phase === 'playing') phase = 'playing'
         else if (hasOpponent) phase = 'lobby'
 
+        if (phase === 'lobby' || phase === 'waiting') {
+          startingRef.current = false
+        }
+
         setState((prev) => ({
           ...prev,
           phase,
