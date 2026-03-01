@@ -26,7 +26,7 @@ describe('generateSvgWithRetry', () => {
     })
     vi.mocked(executeSvgScript).mockReturnValue(VALID_SVG)
 
-    const result = await generateSvgWithRetry([])
+    const result = await generateSvgWithRetry(0.9, [])
     expect(result.svgContent).toBe(VALID_SVG)
     expect(result.theme).toBe('sunset')
     expect(generateRound).toHaveBeenCalledTimes(1)
@@ -40,7 +40,7 @@ describe('generateSvgWithRetry', () => {
       .mockReturnValueOnce(null)
       .mockReturnValueOnce(VALID_SVG)
 
-    const result = await generateSvgWithRetry([])
+    const result = await generateSvgWithRetry(0.9, [])
     expect(result.svgContent).toBe(VALID_SVG)
     expect(result.theme).toBe('sunset')
     expect(generateRound).toHaveBeenCalledTimes(2)
@@ -52,7 +52,7 @@ describe('generateSvgWithRetry', () => {
       .mockResolvedValueOnce({ content: 'good code', fallback: false, theme: 'ocean' })
     vi.mocked(executeSvgScript).mockReturnValue(VALID_SVG)
 
-    const result = await generateSvgWithRetry([])
+    const result = await generateSvgWithRetry(0.9, [])
     expect(result.svgContent).toBe(VALID_SVG)
     expect(result.theme).toBe('ocean')
     expect(generateRound).toHaveBeenCalledTimes(2)
@@ -64,7 +64,7 @@ describe('generateSvgWithRetry', () => {
       .mockResolvedValueOnce({ content: 'good code', fallback: false, theme: 'forest' })
     vi.mocked(executeSvgScript).mockReturnValue(VALID_SVG)
 
-    const result = await generateSvgWithRetry([])
+    const result = await generateSvgWithRetry(0.9, [])
     expect(result.svgContent).toBe(VALID_SVG)
     expect(result.theme).toBe('forest')
     expect(generateRound).toHaveBeenCalledTimes(2)
@@ -78,7 +78,7 @@ describe('generateSvgWithRetry', () => {
     })
     vi.mocked(executeSvgScript).mockReturnValue(null)
 
-    const result = await generateSvgWithRetry([])
+    const result = await generateSvgWithRetry(0.9, [])
     expect(result.svgContent).toBeNull()
     expect(result.theme).toBeUndefined()
     expect(generateRound).toHaveBeenCalledTimes(3)
@@ -87,13 +87,13 @@ describe('generateSvgWithRetry', () => {
   it('returns null after all API errors', async () => {
     vi.mocked(generateRound).mockRejectedValue(new Error('API down'))
 
-    const result = await generateSvgWithRetry([])
+    const result = await generateSvgWithRetry(0.9, [])
     expect(result.svgContent).toBeNull()
     expect(result.theme).toBeUndefined()
     expect(generateRound).toHaveBeenCalledTimes(3)
   })
 
-  it('passes previousThemes to every attempt', async () => {
+  it('passes coherence and previousThemes to every attempt', async () => {
     vi.mocked(generateRound).mockResolvedValue({
       content: 'bad code',
       fallback: false,
@@ -101,11 +101,12 @@ describe('generateSvgWithRetry', () => {
     vi.mocked(executeSvgScript).mockReturnValue(null)
 
     const themes = ['ocean', 'forest']
-    await generateSvgWithRetry(themes)
+    await generateSvgWithRetry(0.7, themes)
 
     for (const call of vi.mocked(generateRound).mock.calls) {
       expect(call[0]).toEqual(expect.objectContaining({
         mode: 'script',
+        coherence: 0.7,
         previousThemes: themes,
       }))
     }
@@ -120,7 +121,7 @@ describe('generateSvgWithRetry', () => {
       .mockReturnValueOnce(null)
       .mockReturnValueOnce(VALID_SVG)
 
-    const result = await generateSvgWithRetry([])
+    const result = await generateSvgWithRetry(0.5, [])
     expect(result.svgContent).toBe(VALID_SVG)
     expect(result.theme).toBe('stars')
     expect(generateRound).toHaveBeenCalledTimes(3)

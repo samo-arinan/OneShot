@@ -7,12 +7,12 @@ runSceneContractTests(calmOcean)
 
 describe('calm-ocean specifics', () => {
   it('contains wave paths', () => {
-    const svg = calmOcean.render({ width: 600, height: 400, seed: 42, rng: seededRandom(42) })
+    const svg = calmOcean.render({ width: 600, height: 400, seed: 42, coherence: 0.9, rng: seededRandom(42) })
     expect(svg).toContain('<path')
   })
 
   it('has ocean gradient', () => {
-    const svg = calmOcean.render({ width: 600, height: 400, seed: 42, rng: seededRandom(42) })
+    const svg = calmOcean.render({ width: 600, height: 400, seed: 42, coherence: 0.9, rng: seededRandom(42) })
     expect(svg).toContain('linearGradient')
   })
 })

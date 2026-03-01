@@ -44,21 +44,21 @@ export function validateSvg(raw: string): string | null {
 }
 
 /**
- * Map a coherence value (0.0-1.0) to a prompt hint string
- * describing how concrete or abstract the art should be.
+ * Map a coherence value (0.0-1.0) to a prompt hint describing
+ * the desired abstraction level for SVG generation.
  */
 export function coherenceToPromptHint(coherence: number): string {
   if (coherence >= 0.8) {
-    return 'Draw a clearly recognizable, concrete subject (e.g., lighthouse, cat, sailboat). The viewer should name it in one word within 2 seconds.'
+    return 'Draw a CONCRETE, RECOGNIZABLE subject using 6-12 SVG elements. The viewer should name it in one word within 2 seconds (e.g., "lighthouse", "cat", "sailboat"). Break the subject into body + details + features. Do NOT use a single path — use multiple elements for realism. Clear foreground/background separation. Harmonious 3-5 color palette.'
   }
-  if (coherence >= 0.65) {
-    return 'Draw a recognizable but slightly stylized subject. It should still be nameable but allow some artistic interpretation (e.g., a stormy sea, a twilight garden, a misty mountain).'
+  if (coherence >= 0.6) {
+    return 'Draw a recognizable but stylized subject using 5-8 SVG elements. The viewer should be able to guess what it is, though shapes are artistically simplified. Keep the main silhouette identifiable.'
   }
-  if (coherence >= 0.45) {
-    return 'Draw a scene that is open to interpretation. The subject should be suggestive rather than obvious — viewers may see different things (e.g., flowing energy, mysterious glow, organic forms merging).'
+  if (coherence >= 0.4) {
+    return 'Create an ambiguous artwork. Multiple interpretations should be possible. Overlap shapes, blur boundaries between layers. Muted contrasts.'
   }
   if (coherence >= 0.2) {
-    return 'Draw an abstract composition with only subtle hints of a real-world subject. Use shapes, colors, and textures that vaguely evoke something without being identifiable.'
+    return 'Create a highly abstract composition. Fragment the main shapes. Use discordant colors. Forms should be barely recognizable.'
   }
-  return 'Draw a purely abstract visual — geometric forms, color fields, or chaotic textures. No recognizable subject needed.'
+  return 'Create chaotic abstract art. Maximum distortion, clashing colors, no recognizable forms.'
 }

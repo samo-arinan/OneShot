@@ -69,7 +69,7 @@ describe('handleStartRound', () => {
       hasHost: true,
       hasGuest: true,
     }
-    const params = { seed: 42, sceneId: 'landscape_1' }
+    const params = { seed: 42, coherence: 0.9, sceneId: 'landscape_1' }
     const result = handleStartRound(state, 'host', 1, params)
 
     expect(result.state.phase).toBe('playing')
@@ -81,7 +81,7 @@ describe('handleStartRound', () => {
 
   it('broadcasts round_start message', () => {
     const state = createEmptyState()
-    const params = { seed: 42, sceneId: 'landscape_1' }
+    const params = { seed: 42, coherence: 0.9, sceneId: 'landscape_1' }
     const result = handleStartRound(state, 'host', 1, params)
 
     expect(result.messages).toHaveLength(1)
@@ -94,7 +94,7 @@ describe('handleStartRound', () => {
 
   it('rejects start_round from guest', () => {
     const state = createEmptyState()
-    const params = { seed: 42, sceneId: 'landscape_1' }
+    const params = { seed: 42, coherence: 0.9, sceneId: 'landscape_1' }
     const result = handleStartRound(state, 'guest', 1, params)
 
     expect(result.state).toBe(state)
@@ -109,7 +109,7 @@ describe('handleGuess', () => {
     hasHost: true,
     hasGuest: true,
     currentRound: 1,
-    currentParams: { seed: 42, sceneId: 'test' },
+    currentParams: { seed: 42, coherence: 0.9, sceneId: 'test' },
   }
 
   it('stores host guess as guessA', () => {
@@ -169,7 +169,7 @@ describe('handleJudgeResult', () => {
     hasHost: true,
     hasGuest: true,
     currentRound: 1,
-    currentParams: { seed: 42, sceneId: 'test' },
+    currentParams: { seed: 42, coherence: 0.9, sceneId: 'test' },
   }
 
   it('creates round record and adds to history', () => {
@@ -275,7 +275,7 @@ describe('handleJudgeResult', () => {
       currentRound: 2,
       history: [{
         round: 1,
-        params: { seed: 10, sceneId: 'old' },
+        params: { seed: 10, coherence: 0.9, sceneId: 'old' },
         guessA: 'a', guessB: 'b', match: 'perfect', comment: 'nice',
       }],
     }
@@ -297,7 +297,7 @@ describe('handleUpdateRoundArt', () => {
     hasHost: true,
     hasGuest: true,
     currentRound: 1,
-    currentParams: { seed: 42, sceneId: 'landscape_1' },
+    currentParams: { seed: 42, coherence: 0.9, sceneId: 'landscape_1' },
   }
 
   it('updates svgContent and theme in currentParams', () => {
@@ -336,6 +336,7 @@ describe('handleUpdateRoundArt', () => {
   it('preserves other fields in currentParams', () => {
     const result = handleUpdateRoundArt(playingState, 'host', '<svg>art</svg>', 'sunset')
     expect(result.state.currentParams!.seed).toBe(42)
+    expect(result.state.currentParams!.coherence).toBe(0.9)
     expect(result.state.currentParams!.sceneId).toBe('landscape_1')
   })
 })
@@ -349,7 +350,7 @@ describe('handlePlayAgain', () => {
       hasGuest: true,
       currentRound: 3,
       history: [
-        { round: 1, params: { seed: 1, sceneId: 'a' },
+        { round: 1, params: { seed: 1, coherence: 0.9, sceneId: 'a' },
           guessA: 'x', guessB: 'y', match: 'perfect', comment: 'wow' },
       ],
       finalComment: 'Great game!',

@@ -8,15 +8,18 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'MISTRAL_API_KEY not configured' })
   }
 
-  const { mode, previousThemes, lang } = req.body
+  const { mode, coherence, previousThemes, lang } = req.body
 
   if (mode !== 'script' && mode !== 'json') {
     return res.status(400).json({ error: 'mode must be "script" or "json"' })
   }
+  if (typeof coherence !== 'number') {
+    return res.status(400).json({ error: 'coherence must be a number' })
+  }
 
   const isJa = lang === 'ja'
   const systemPrompt = mode === 'script' ? scriptSystemPrompt(isJa) : jsonSystemPrompt(isJa)
-  const userPrompt = buildUserPrompt(mode, previousThemes, isJa)
+  const userPrompt = buildUserPrompt(mode, coherence, previousThemes, isJa)
 
   try {
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
@@ -69,7 +72,7 @@ function scriptSystemPrompt(isJa) {
 
 ## 構図
 - 背景: グラデーションや単色
-- 主題: 6〜12個のSVG要素。1つのpathではなく、体・ディテール・特徴に分解する
+- 主題: 6〜12個のSVG要素で構成。1つのpathではなく、体・ディテール・特徴に分解する
 - テクスチャ: 半透明の全面rect（opacity 0.03-0.10）（任意）
 - アクセント: グロー効果（radialGradient）（任意）
 
@@ -89,7 +92,6 @@ function scriptSystemPrompt(isJa) {
 ## 出力形式
 JSON: {"code": "...", "theme": "..."}`
   }
-
   return `You are an SVG artist who writes JavaScript code to generate detailed artwork.
 
 ## Rules
@@ -176,7 +178,9 @@ Return a JSON object: {"scene": {...}, "theme": "..."}
 "scene" is a scene object in the format described above.`
 }
 
-function buildUserPrompt(mode, previousThemes, isJa) {
+function buildUserPrompt(mode, coherence, previousThemes, isJa) {
+  const hint = getCoherenceHint(coherence, isJa)
+
   const modeNote = mode === 'script'
     ? (isJa ? 'JavaScript関数本体を生成してください。' : 'Generate a JavaScript function body.')
     : (isJa ? 'JSONシーン記述を生成してください。' : 'Generate a JSON scene description.')
@@ -187,15 +191,30 @@ function buildUserPrompt(mode, previousThemes, isJa) {
       : `\n\nAvoid these themes (already used): ${previousThemes.join(', ')}`)
     : ''
 
-  const hint = isJa
-    ? '具体的で認識可能な主題を6〜12個のSVG要素で描く。見た人が2秒以内に一言で名前を言える（例:「灯台」「猫」「帆船」）。主題を本体＋ディテール＋特徴に分解する。単一pathではなく複数要素でリアルに。前景と背景の明確な分離。調和の取れた3〜5色パレット。'
-    : 'Draw a CONCRETE, RECOGNIZABLE subject using 6-12 SVG elements. The viewer should name it in one word within 2 seconds (e.g., "lighthouse", "cat", "sailboat"). Break the subject into body + details + features. Do NOT use a single path — use multiple elements for realism. Clear foreground/background separation. Harmonious 3-5 color palette.'
-
-  const subject = isJa
-    ? '1つのアートワークを生成してください。'
-    : 'Generate 1 artwork.'
+  const subject = coherence >= 0.6
+    ? (isJa
+      ? '具体的で認識可能な主題を細かく描写した1つのアートワークを生成してください。'
+      : 'Generate 1 artwork depicting a concrete, recognizable subject with fine detail.')
+    : (isJa
+      ? '1つの抽象アートワークを生成してください。'
+      : 'Generate 1 abstract artwork.')
 
   return `${subject} ${modeNote}\n\n${hint}${avoidLine}`
+}
+
+function getCoherenceHint(coherence, isJa) {
+  if (isJa) {
+    if (coherence >= 0.8) return '具体的で認識可能な主題を6〜12個のSVG要素で描く。見た人が2秒以内に一言で名前を言える（例:「灯台」「猫」「帆船」）。主題を本体＋ディテール＋特徴に分解する。単一pathではなく複数要素でリアルに。前景と背景の明確な分離。調和の取れた3〜5色パレット。'
+    if (coherence >= 0.6) return '認識可能だがスタイライズされた主題を5〜8個のSVG要素で描く。何が描かれているか推測できるが、形は芸術的に簡略化されている。主要なシルエットは識別可能に保つ。'
+    if (coherence >= 0.4) return '曖昧なアートワーク。複数の解釈が可能。形を重ね、レイヤー間の境界をぼかす。控えめなコントラスト。'
+    if (coherence >= 0.2) return '高度に抽象的な構図。主要な形を断片化。不協和な色彩。フォルムはほぼ認識不能。'
+    return 'カオスな抽象アート。最大限の歪み、衝突する色彩、認識可能なフォルムなし。'
+  }
+  if (coherence >= 0.8) return 'Draw a CONCRETE, RECOGNIZABLE subject using 6-12 SVG elements. The viewer should name it in one word within 2 seconds (e.g., "lighthouse", "cat", "sailboat"). Break the subject into body + details + features. Do NOT use a single path — use multiple elements for realism. Clear foreground/background separation. Harmonious 3-5 color palette.'
+  if (coherence >= 0.6) return 'Draw a recognizable but stylized subject using 5-8 SVG elements. The viewer should be able to guess what it is, though shapes are artistically simplified. Keep the main silhouette identifiable.'
+  if (coherence >= 0.4) return 'Create an ambiguous artwork. Multiple interpretations should be possible. Overlap shapes, blur boundaries between layers. Muted contrasts.'
+  if (coherence >= 0.2) return 'Create a highly abstract composition. Fragment the main shapes. Use discordant colors. Forms should be barely recognizable.'
+  return 'Create chaotic abstract art. Maximum distortion, clashing colors, no recognizable forms.'
 }
 
 function parseResponse(mode, parsed) {

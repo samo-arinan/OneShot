@@ -1,21 +1,26 @@
 import type { Scene, SceneRenderParams } from '../../types'
-import { ridgePointsToPath } from '../../lib/svg-utils'
+import { jitter, distortPath, buildDistortionFilter, distortPalette, ridgePointsToPath } from '../../lib/coherence-utils'
 
 export const desertDunes: Scene = {
   id: 'desert-dunes',
   name: '砂漠の砂丘',
   category: 'landscape',
 
-  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
-    const palette = ['#D4AA60', '#E8852A', '#C0562A', '#F5C842', '#8B3A1A']
+  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
+    const palette = distortPalette(
+      ['#D4AA60', '#E8852A', '#C0562A', '#F5C842', '#8B3A1A'],
+      coherence, rng
+    )
+    const filterId = `distort-${seed}`
+    const filter = buildDistortionFilter(coherence, filterId, seed)
 
     // Layer 1: Background - sky to horizon
-    const horizonY = H * 0.4
+    const horizonY = jitter(H * 0.4, coherence, rng, H * 0.08)
     const horizonPct = (horizonY / H * 100).toFixed(1)
 
     // Layer 2: Back dune ridge
-    const backDuneY = H * 0.55
-    const backRidgePoints = [
+    const backDuneY = jitter(H * 0.55, coherence, rng, H * 0.08)
+    const backRidgePoints = distortPath([
       { x: 0, y: backDuneY },
       { x: W * 0.18, y: backDuneY - H * 0.12 },
       { x: W * 0.38, y: backDuneY - H * 0.18 },
@@ -23,25 +28,29 @@ export const desertDunes: Scene = {
       { x: W * 0.72, y: backDuneY - H * 0.16 },
       { x: W * 0.9, y: backDuneY - H * 0.1 },
       { x: W, y: backDuneY },
-    ]
+    ], coherence, rng)
 
     // Layer 2: Front dune ridge
-    const frontDuneY = H * 0.72
-    const frontRidgePoints = [
+    const frontDuneY = jitter(H * 0.72, coherence, rng, H * 0.08)
+    const frontRidgePoints = distortPath([
       { x: 0, y: frontDuneY },
       { x: W * 0.25, y: frontDuneY - H * 0.2 },
       { x: W * 0.5, y: frontDuneY - H * 0.14 },
       { x: W * 0.75, y: frontDuneY - H * 0.22 },
       { x: W, y: frontDuneY - H * 0.05 },
-    ]
+    ], coherence, rng)
+
+    // Layer 3: Texture overlay - heat shimmer effect
+    const texOpacity = ((1.0 - coherence) * 0.3).toFixed(2)
 
     // Layer 4: Sun accent
-    const sunX = W * 0.8
-    const sunY = H * 0.18
-    const sunR = 22
+    const sunX = jitter(W * 0.8, coherence, rng, W * 0.12)
+    const sunY = jitter(H * 0.18, coherence, rng, H * 0.1)
+    const sunR = jitter(22, coherence, rng, 8)
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
         <defs>
+          ${filter}
           <linearGradient id="sky-${seed}" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#F0C060" />
             <stop offset="${horizonPct}%" stop-color="#E88030" />
@@ -65,12 +74,20 @@ export const desertDunes: Scene = {
         <rect width="${W}" height="${H}" fill="url(#sky-${seed})" />
 
         <!-- Layer 2: Back dune -->
-        <path d="${ridgePointsToPath(backRidgePoints, W, H)}"
-              fill="url(#back-dune-${seed})" opacity="0.88" />
+        <g filter="url(#${filterId})">
+          <path d="${ridgePointsToPath(backRidgePoints, W, H)}"
+                fill="url(#back-dune-${seed})" opacity="0.88" />
+        </g>
 
         <!-- Layer 2: Front dune -->
-        <path d="${ridgePointsToPath(frontRidgePoints, W, H)}"
-              fill="url(#front-dune-${seed})" opacity="0.95" />
+        <g filter="url(#${filterId})">
+          <path d="${ridgePointsToPath(frontRidgePoints, W, H)}"
+                fill="url(#front-dune-${seed})" opacity="0.95" />
+        </g>
+
+        <!-- Layer 3: Texture overlay -->
+        <rect width="${W}" height="${H}" filter="url(#${filterId})"
+              fill="${palette[0]}" opacity="${texOpacity}" />
 
         <!-- Layer 4: Sun -->
         <circle cx="${sunX.toFixed(1)}" cy="${sunY.toFixed(1)}" r="${(sunR * 3.5).toFixed(1)}"

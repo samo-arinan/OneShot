@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { selectScene, generateParams } from '../src/lib/scene-selector'
+import { computeCoherence, selectScene, generateParams } from '../src/lib/scene-selector'
 import { seededRandom } from '../src/lib/seeded-random'
 import type { Scene } from '../src/types'
 
@@ -13,6 +13,33 @@ const mockScenes: Scene[] = [
   { id: 'g', name: 'G', category: 'landscape', render: () => '' },
   { id: 'h', name: 'H', category: 'sky', render: () => '' },
 ]
+
+describe('computeCoherence', () => {
+  it('round 1 returns 0.9', () => {
+    expect(computeCoherence(1)).toBeCloseTo(0.9)
+  })
+
+  it('round 2 returns 0.7', () => {
+    expect(computeCoherence(2)).toBeCloseTo(0.7)
+  })
+
+  it('round 3 returns 0.5', () => {
+    expect(computeCoherence(3)).toBeCloseTo(0.5)
+  })
+
+  it('round 4 returns 0.3', () => {
+    expect(computeCoherence(4)).toBeCloseTo(0.3)
+  })
+
+  it('round 5 returns 0.1', () => {
+    expect(computeCoherence(5)).toBeCloseTo(0.1)
+  })
+
+  it('round 6+ stays at 0.1', () => {
+    expect(computeCoherence(6)).toBeCloseTo(0.1)
+    expect(computeCoherence(10)).toBeCloseTo(0.1)
+  })
+})
 
 describe('selectScene', () => {
   it('returns a scene from the pool', () => {
@@ -58,12 +85,20 @@ describe('selectScene', () => {
 })
 
 describe('generateParams', () => {
-  it('returns seed and sceneId', () => {
+  it('returns seed, coherence, sceneId', () => {
     const params = generateParams(1, [], mockScenes)
     expect(typeof params.seed).toBe('number')
     expect(params.seed).toBeGreaterThan(0)
+    expect(params.coherence).toBeCloseTo(0.9)
     expect(typeof params.sceneId).toBe('string')
     expect(params.sceneId.length).toBeGreaterThan(0)
+  })
+
+  it('coherence matches computeCoherence for the round', () => {
+    for (let round = 1; round <= 6; round++) {
+      const params = generateParams(round, [], mockScenes)
+      expect(params.coherence).toBeCloseTo(computeCoherence(round))
+    }
   })
 
   it('sceneId is a valid scene from the pool', () => {

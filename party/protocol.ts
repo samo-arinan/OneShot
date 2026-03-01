@@ -4,6 +4,7 @@ import type { MatchLevel } from '../src/types'
 
 export interface VisualParamsWire {
   seed: number
+  coherence: number
   sceneId: string
   svgContent?: string
   theme?: string

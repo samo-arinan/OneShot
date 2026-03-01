@@ -3,7 +3,7 @@
 ## Concept
 
 Show the same abstract artwork to two players and ask "What does this look like?"
-If they see the same thing, they advance to the next round. Each round, a different AI-generated artwork is shown.
+If they see the same thing, they advance to the next round. Each round, the image becomes more abstract.
 How long can they keep matching?
 
 **"One Shot" = One chance per round. Can you see the same thing?**
@@ -17,6 +17,7 @@ How long can they keep matching?
 - v6: Full redesign as a game
   - Removed profile questions → nickname only
   - Round-based system (consecutive match challenge)
+  - Difficulty curve (coherence decreases each round)
   - Visual generation moved to frontend (Canvas API)
   - Single API endpoint (judge only)
 - v7: Switched drawing engine to motif-based approach (Canvas API)
@@ -29,6 +30,7 @@ How long can they keep matching?
   - New `POST /api/generate-svg` endpoint using `mistral-large-latest`
   - Art mode toggle on StartScreen: "Classic" (48 hardcoded scenes) vs "AI Script" / "AI Scene" (Mistral-generated)
   - Two AI modes: Script (JS code → SVG) and JSON (scene description → SVG)
+  - Prompt-based coherence control (abstraction level encoded in prompt)
   - SVG validation & sanitization (XSS prevention for dangerouslySetInnerHTML)
   - Automatic fallback to classic scenes on API failure
   - Remote mode: host generates SVG and distributes via PartyKit WebSocket
@@ -55,7 +57,7 @@ How long can they keep matching?
   - `RoundResultScreen` displays `params.theme` (the LLM-chosen short theme label) below the artwork
   - Only shown when theme exists (AI-generated art); hidden for classic scene fallback
 - **v14: SVG generation retry on failure**
-  - New `generateSvgWithRetry(previousThemes)` function in `art-prefetch.ts`
+  - New `generateSvgWithRetry(coherence, previousThemes)` function in `art-prefetch.ts`
   - On SVG execution/validation failure or API error, retries API call up to 2 additional times (3 attempts total)
   - Falls back to classic scene only after all retry attempts are exhausted
   - All SVG generation paths (prefetch, LocalGame on-demand, RemoteGame on-demand) unified through this function
@@ -67,16 +69,6 @@ How long can they keep matching?
   - **Guest (URL with room code)**: Skips full onboarding; instead, a brief 1-line game description is shown inline on the guest join screen (first visit only). "Join Room" button also marks onboarding as seen
   - New i18n keys: `onboardingHeading`, `onboardingBody1-3`, `onboardingStart`, `onboardingBrief`
   - New files: `src/lib/onboarding.ts`, `src/components/OnboardingScreen.tsx`, `tests/onboarding.test.ts`
-- **v16: Remove coherence parameter — all art is always concrete**
-  - Removed `coherence` field from `VisualParams`, `GenerateRoundRequest`, `VisualParamsWire`, `SceneRenderParams`
-  - Deleted `coherence-utils.ts` (jitter, distortPath, buildDistortionFilter, distortPalette); renamed to `svg-utils.ts` keeping only `ridgePointsToPath`
-  - Removed `computeCoherence` from `scene-selector.ts`; `generateParams` returns `{ seed, sceneId }` only
-  - Removed `coherenceToPromptHint` from `svg-generator.ts`
-  - `api/generate-svg.js` always requests concrete, recognizable subjects (no abstraction tiers)
-  - `generateSvgWithRetry(previousThemes)` — no coherence parameter
-  - `startPrefetch(artMode, previousThemes)` — no round or coherence parameter
-  - All 48 scene render functions simplified: no coherence in params, no jitter/distortPath/distortPalette/buildDistortionFilter calls
-  - Classic scenes now render at full fidelity (fallback only, no distortion)
 
 ---
 
@@ -89,7 +81,8 @@ How long can they keep matching?
 
     ↓
 
-[Round 1] AI-generated artwork displayed
+[Round 1] High coherence (recognizable image)
+  Abstract artwork displayed prominently
   Both players enter "What does this look like?"
   → Match judgment
 
@@ -98,7 +91,8 @@ How long can they keep matching?
 
     ↓
 
-[Round 2] New AI-generated artwork displayed
+[Round 2] Slightly more abstract
+  New abstract artwork displayed
   Both players enter "What does this look like?"
   → Match judgment
 
@@ -107,8 +101,8 @@ How long can they keep matching?
 
     ↓
 
-[Round 3+] New AI-generated artwork each round
-  (Repeats)
+[Round 3+] Even more abstract...
+  (Repeats. Gets harder with each round)
 
     ↓
 
@@ -129,11 +123,23 @@ How long can they keep matching?
 - Each round: display abstract art → both players enter free text → LLM judges match
 - Match → next round, no match → game over
 - **Consecutive match count** is the score (no numeric 0-100 score)
+- Abstraction increases each round, making matches harder
+
+### Difficulty Curve
+
+```
+Round 1: coherence 0.9 — clearly looks like something (landscapes, objects come to mind)
+Round 2: coherence 0.7 — somewhat recognizable (interpretations start to diverge)
+Round 3: coherence 0.5 — ambiguous (multiple interpretations possible)
+Round 4: coherence 0.3 — quite abstract (opinions likely to differ)
+Round 5+: coherence 0.1 — near chaos (matching would be a miracle)
+```
 
 ### Visual Generation
-- **AI-generated SVG art** is the primary path: Mistral API generates JS code that produces SVG artwork
-- Classic scenes (48 hardcoded SVG scene definitions) serve as fallback only when AI generation fails
-- Each classic scene bundles composition + color palette + rendering logic as one unit
+- **SVG scene-based approach**: scene definitions → frontend generates and displays SVG
+- Each scene bundles composition + color palette + rendering logic as one unit
+- Coherence parameter controls clarity ↔ distortion of composition
+- **LLM is not involved in visual generation** → frontend-only (saves API calls)
 
 ### Match Judgment
 - LLM (Mistral API) judges semantic similarity of both answers
@@ -359,6 +365,7 @@ The LLM freely chooses a theme each round; `previousThemes` prevents repetition.
 Request:
 {
   mode: "script",               // JS code → SVG (only mode)
+  coherence: number,            // 0.0-1.0, controls abstraction level
   previousThemes?: string[],    // themes to avoid (already used)
   lang?: "en" | "ja"
 }
@@ -375,7 +382,12 @@ Response:
 - Temperature: 0.9 (high creativity)
 - max_tokens: 2048 (single round)
 - SVG constraints: viewBox 0 0 360 360, no text/script/event handlers
-- Always requests concrete, recognizable subjects
+- Coherence mapping:
+  - 0.8+: clearly recognizable scene
+  - 0.6-0.8: somewhat abstract, stylized
+  - 0.4-0.6: ambiguous, multiple interpretations
+  - 0.2-0.4: highly abstract, fragmented
+  - <0.2: chaotic visual noise
 - Security: SVG validation rejects `<script>`, `on*` attributes, `javascript:` URIs
 - Background prefetching: round N+1 is generated while the player is on round N
 
@@ -385,12 +397,17 @@ Response:
 
 ### Design Philosophy
 
-AI-generated SVG art is the primary visual path. The Mistral API generates JS code that produces concrete, recognizable SVG artwork each round. Classic scenes (48 hardcoded SVG templates) serve as fallback when AI generation fails.
+A scene = "composition + palette + rendering logic" bundled as one drawing template.
+Each round, a scene is randomly selected, and the coherence parameter controls composition clarity.
+
+- Round 1 (coherence 0.9): Scene composition is clearly visible → "Oh, it's a mountain"
+- Round 5 (coherence 0.1): Composition collapses → "What even is this lol"
 
 Reasons for choosing SVG:
 - Declarative composition description makes adding scenes easy
+- Adding jitter to coordinates/parameters achieves coherence-based distortion
+- SVG filters (feTurbulence, feGaussianBlur, feDisplacementMap) enable blur and warp effects
 - As DOM elements, they integrate smoothly with React
-- AI-generated JS code can construct SVG programmatically
 
 ### Core Type Definitions
 
@@ -399,6 +416,7 @@ Reasons for choosing SVG:
 
 interface VisualParams {
   seed: number;           // Random seed (for reproducibility)
+  coherence: number;      // 0.0-1.0 (decreases with rounds)
   sceneId: string;        // Selected scene ID
 }
 
@@ -413,6 +431,7 @@ interface SceneRenderParams {
   width: number;          // SVG width (px)
   height: number;         // SVG height (px)
   seed: number;
+  coherence: number;
   rng: () => number;      // seeded random
 }
 
@@ -430,14 +449,15 @@ type SceneCategory =
 ```typescript
 // scene-selector.ts
 
-function generateParams(previousSceneIds: string[], scenes: Scene[]): { seed: number; sceneId: string } {
+function generateParams(round: number, previousSceneIds: string[], scenes: Scene[]): VisualParams {
   const seed = Math.floor(Math.random() * 100000);
   const rng = seededRandom(seed);
+  const coherence = Math.max(0.1, 1.0 - (round - 1) * 0.2);
 
   // Avoid same scene and same category as the last 2 rounds
   const scene = selectScene(rng, previousSceneIds, scenes);
 
-  return { seed, sceneId: scene.id };
+  return { seed, coherence, sceneId: scene.id };
 }
 
 function selectScene(rng: RNG, excludeIds: string[], scenes: Scene[]): Scene {
@@ -453,63 +473,179 @@ All scenes are composed of the following 4 layers:
 
 ```
 Layer 1: Background (gradient, radial, solid)
-  → Sets the scene's "atmosphere"
+  → Sets the scene's "atmosphere". Color boundaries blur as coherence decreases
 
 Layer 2: Main shape (silhouette, ridgeline, circles, etc.)
-  → The core of "what it looks like"
+  → The core of "what it looks like". Shape distorts as coherence decreases
 
 Layer 3: Texture (blur/noise via SVG filters)
-  → Adds visual depth and atmosphere
+  → Intensifies as coherence decreases, obscuring the main shape
 
 Layer 4: Accent (light source, highlights, glow)
-  → Landmarks (moon, sun, etc.) and highlights
+  → At high coherence, serves as landmarks (moon, sun, etc.). Distorts at low coherence
+```
+
+### Coherence Distortion Rules (common to all scenes)
+
+```
+coherence: 0.9 (Round 1)
+  Main shape  → Scene composition is clearly recognizable
+  Coordinates → Near-zero jitter
+  Filters     → Weak feTurbulence, minimal feGaussianBlur
+  Palette     → As defined by scene, unified 2-3 colors
+  → Most people see the same thing: "Oh, a mountain" "Looks like the ocean"
+
+coherence: 0.7 (Round 2)
+  Main shape  → Recognizable but somewhat ambiguous
+  Coordinates → Small jitter added to control points
+  Filters     → Blur begins to appear
+  Palette     → 1-2 extra colors, slight deviation
+  → "A mountain... maybe? Could be a hill"
+
+coherence: 0.5 (Round 3)
+  Main shape  → Traces remain but alternative interpretations possible
+  Coordinates → Moderate jitter
+  Filters     → Texture becomes prominent
+  Palette     → Hue range widens, unexpected colors appear
+  → "Could be waves, could be a desert"
+
+coherence: 0.3 (Round 4)
+  Main shape  → Original scene nearly unidentifiable
+  Coordinates → Control points shift dramatically
+  Filters     → Dominant, obscuring shapes
+  Palette     → Disharmonious, complementary colors clash
+  → "Something... I can feel the vibe but..."
+
+coherence: 0.1 (Round 5+)
+  Main shape  → Complete collapse
+  Coordinates → Maximum jitter
+  Filters     → Maximum
+  Palette     → Chaos
+  → "Just going with my gut at this point lol"
+```
+
+### Coherence Distortion Implementation
+
+```typescript
+// coherence-utils.ts
+
+// === Coordinate Jitter ===
+// Lower coherence → more random coordinate displacement
+function jitter(value: number, coherence: number, rng: RNG, maxOffset: number): number {
+  const noise = (rng() - 0.5) * 2 * maxOffset * (1.0 - coherence);
+  return value + noise;
+}
+
+// === Path Point Distortion ===
+// Apply jitter to Bézier curve control points
+function distortPath(points: Point[], coherence: number, rng: RNG): Point[] {
+  return points.map(p => ({
+    x: jitter(p.x, coherence, rng, 50),
+    y: jitter(p.y, coherence, rng, 50),
+  }));
+}
+
+// === SVG Filter Generation ===
+// feTurbulence + feDisplacementMap scaled by coherence
+function buildDistortionFilter(coherence: number, filterId: string, seed: number): string {
+  const turbFreq = lerp(0.0, 0.04, 1.0 - coherence);   // 0 (none) – 0.04 (intense)
+  const turbOctaves = Math.ceil(lerp(1, 5, 1.0 - coherence));
+  const dispScale = lerp(0, 60, 1.0 - coherence);       // 0 (none) – 60 (heavy warp)
+  const blurRadius = lerp(0, 8, 1.0 - coherence);
+
+  return `
+    <filter id="${filterId}" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise"
+        baseFrequency="${turbFreq}"
+        numOctaves="${turbOctaves}"
+        seed="${seed}"
+        result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise"
+        scale="${dispScale}"
+        xChannelSelector="R" yChannelSelector="G" />
+      <feGaussianBlur stdDeviation="${blurRadius}" />
+    </filter>
+  `;
+}
+
+// === Color Distortion ===
+// Lower coherence → foreign colors injected into palette
+function distortPalette(
+  baseColors: string[],
+  coherence: number,
+  rng: RNG
+): string[] {
+  if (coherence > 0.7) return baseColors;
+
+  const mutated = [...baseColors];
+  const extraCount = Math.floor((1.0 - coherence) * 3);
+  for (let i = 0; i < extraCount; i++) {
+    const randomHue = Math.floor(rng() * 360);
+    mutated.push(`hsl(${randomHue}, ${50 + rng() * 30}%, ${30 + rng() * 40}%)`);
+  }
+  return mutated;
+}
+
+// === Utilities ===
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * Math.max(0, Math.min(1, t));
+}
+
+function seededRandom(seed: number): () => number { /* ... */ }
 ```
 
 ### Scene Definition Format
 
 Each scene is defined with the following structure.
-The `render` function returns an SVG string. Scenes render at full fidelity (no distortion).
+The `render` function returns an SVG string. Coherence-based distortion uses the shared utilities.
 
 ```typescript
 // scenes/fuji-moonlight.ts
 
 import { Scene, SceneRenderParams } from '../types';
-import { ridgePointsToPath } from '../svg-utils';
+import { jitter, distortPath, buildDistortionFilter, distortPalette } from '../coherence-utils';
 
 export const fujiMoonlight: Scene = {
   id: "fuji-moonlight",
   name: "Moonlit Fuji",
   category: "landscape",
 
-  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
-    const palette = ["#1B3A5C", "#0D1B2A", "#2C2C2C", "#C9A959", "#F5F0E8"];
+  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
+    const palette = distortPalette(
+      ["#1B3A5C", "#0D1B2A", "#2C2C2C", "#C9A959", "#F5F0E8"],
+      coherence, rng
+    );
+    const filterId = `distort-${seed}`;
+    const filter = buildDistortionFilter(coherence, filterId);
 
     // --- Layer 1: Background (night sky gradient) ---
-    const horizonY = H * 0.55;
+    const horizonY = jitter(H * 0.55, coherence, rng, H * 0.15);
 
     // --- Layer 2: Main shape (mountain silhouette) ---
     // Triangle-based ridgeline. Asymmetric, right shoulder slightly lower
-    const peakX = W * 0.45;
-    const peakY = H * 0.2;
-    const ridgePoints = [
+    const peakX = jitter(W * 0.45, coherence, rng, W * 0.1);
+    const peakY = jitter(H * 0.2, coherence, rng, H * 0.1);
+    const ridgePoints = distortPath([
       { x: 0, y: horizonY },
       { x: W * 0.2, y: horizonY - H * 0.05 },
       { x: peakX, y: peakY },
       { x: W * 0.7, y: horizonY - H * 0.03 },
       { x: W, y: horizonY + H * 0.02 },
-    ];
+    ], coherence, rng);
 
-    // --- Layer 3: Texture ---
-    // Subtle atmosphere
+    // --- Layer 3: Texture (applied via SVG filter) ---
+    // Filter applied to silhouette group
 
     // --- Layer 4: Accent (moon) ---
-    const moonX = W * 0.78;
-    const moonY = H * 0.15;
-    const moonR = 25;
+    const moonX = jitter(W * 0.78, coherence, rng, W * 0.1);
+    const moonY = jitter(H * 0.15, coherence, rng, H * 0.08);
+    const moonR = jitter(25, coherence, rng, 10);
+    const showMoon = coherence > 0.5 || rng() > 0.7;
 
     return `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
         <defs>
+          ${filter}
           <linearGradient id="sky-${seed}" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="${palette[1]}" />
             <stop offset="${(horizonY / H * 100).toFixed(1)}%" stop-color="${palette[0]}" />
@@ -529,18 +665,41 @@ export const fujiMoonlight: Scene = {
         <rect y="${horizonY}" width="${W}" height="${H - horizonY}" fill="url(#ground-${seed})" />
 
         <!-- Layer 2: Mountain silhouette -->
-        <path d="${ridgePointsToPath(ridgePoints, W, H)}"
-              fill="${palette[2]}" opacity="0.9" />
+        <g filter="url(#${filterId})">
+          <path d="${ridgePointsToPath(ridgePoints, W, H)}"
+                fill="${palette[2]}" opacity="0.9" />
+        </g>
+
+        <!-- Layer 3: Texture overlay -->
+        <!-- feTurbulence-based noise rect (opacity increases at low coherence) -->
+        <rect width="${W}" height="${H}" filter="url(#${filterId})"
+              fill="${palette[0]}" opacity="${((1.0 - coherence) * 0.3).toFixed(2)}" />
 
         <!-- Layer 4: Moon -->
-        <circle cx="${moonX}" cy="${moonY}" r="${moonR * 2.5}"
-                fill="url(#moon-glow-${seed})" />
-        <circle cx="${moonX}" cy="${moonY}" r="${moonR}"
-                fill="${palette[4]}" opacity="0.85" />
+        ${showMoon ? `
+          <circle cx="${moonX}" cy="${moonY}" r="${moonR * 2.5}"
+                  fill="url(#moon-glow-${seed})" />
+          <circle cx="${moonX}" cy="${moonY}" r="${moonR}"
+                  fill="${palette[4]}" opacity="0.85" />
+        ` : ''}
       </svg>
     `;
   }
 };
+
+// Path conversion helper
+function ridgePointsToPath(points: Point[], W: number, H: number): string {
+  // Generate Bézier curve path from points, closing at bottom edge
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const cpx = (prev.x + curr.x) / 2;
+    d += ` Q ${cpx} ${prev.y} ${curr.x} ${curr.y}`;
+  }
+  d += ` L ${W} ${H} L 0 ${H} Z`;
+  return d;
+}
 ```
 
 ### Scene List (40-50 types)
@@ -655,8 +814,8 @@ function AbstractArt({ params, width = 600, height = 400, className = '' }: Prop
     const scene = SCENE_REGISTRY.find(s => s.id === params.sceneId);
     if (!scene) return '';
     const rng = seededRandom(params.seed);
-    return scene.render({ width, height, seed: params.seed, rng });
-  }, [params.svgContent, params.seed, params.sceneId, width, height]);
+    return scene.render({ width, height, seed: params.seed, coherence: params.coherence, rng });
+  }, [params.svgContent, params.seed, params.coherence, params.sceneId, width, height]);
 
   const dataUri = useMemo(() => {
     if (!svgString) return '';
@@ -688,7 +847,7 @@ When re-rendering past rounds on the results screen, the stored params + seededR
 ```typescript
 interface RoundRecord {
   round: number;
-  params: VisualParams;    // seed, sceneId → reproducible
+  params: VisualParams;    // seed, coherence, sceneId → reproducible
   guessA: string;
   guessB: string;
   match: MatchResult;
@@ -857,20 +1016,23 @@ Nickname input added UX friction without real value. Removed entirely in favor o
 
 ```
 Phase 1 (first 2-3 hours): SVG scene engine implementation & validation
-  - Implement shared utilities (seededRandom, ridgePointsToPath)
+  - Implement shared utilities (seededRandom, jitter, distortPath, buildDistortionFilter)
   - Finalize scene definition format
   - Implement 3 pilot scenes (minimum validation set)
     - "fuji-moonlight" (landscape) — easiest to achieve "looks like something"
     - "calm-ocean" (water) — horizon + waves to verify composition variation
     - "concentric-eye" (abstract) — validate non-landscape category
-  - Verify each scene renders clearly recognizable artwork
+  - Verify each scene at coherence 0.9 / 0.5 / 0.1
+    → Round 1 (0.9): "looks like something" = OK
+    → Round 3 (0.5): interpretations start to diverge = OK
+    → Round 5 (0.1): "no idea lol" = OK
   - If validation passes, implement remaining scenes
 
 Phase 2 (next 4-5 hours): Working local mode
   - Vite + React + Tailwind setup
   - Start screen (nickname input)
   - Game loop (round progression)
-  - SVG rendering (AI-generated art with classic fallback)
+  - SVG rendering (coherence decreases each round)
   - "What does this look like?" input UI
   - POST /api/judge (Vercel Functions → Mistral API)
   - Round result display (match/no match)

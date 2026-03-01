@@ -20,9 +20,10 @@ export function AbstractArt({ params, width = 600, height = 400, className = '' 
       width,
       height,
       seed: params.seed,
+      coherence: params.coherence,
       rng,
     })
-  }, [params.svgContent, params.seed, params.sceneId, width, height])
+  }, [params.svgContent, params.seed, params.coherence, params.sceneId, width, height])
 
   const dataUri = useMemo(() => {
     if (!svgString) return ''

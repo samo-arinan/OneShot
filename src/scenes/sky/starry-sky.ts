@@ -1,16 +1,21 @@
 import type { Scene, SceneRenderParams } from '../../types'
-import { ridgePointsToPath } from '../../lib/svg-utils'
+import { jitter, distortPath, buildDistortionFilter, distortPalette, ridgePointsToPath } from '../../lib/coherence-utils'
 
 export const starrySky: Scene = {
   id: 'starry-sky',
   name: '星空',
   category: 'sky',
 
-  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
-    const palette = ['#06071A', '#0D1033', '#1A1A4A', '#F5F5FF', '#B0C4DE']
+  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
+    const palette = distortPalette(
+      ['#06071A', '#0D1033', '#1A1A4A', '#F5F5FF', '#B0C4DE'],
+      coherence, rng
+    )
+    const filterId = `distort-${seed}`
+    const filter = buildDistortionFilter(coherence, filterId, seed)
 
-    const ridgeY = H * 0.7
-    const ridgePoints = [
+    const ridgeY = jitter(H * 0.7, coherence, rng, H * 0.08)
+    const ridgePoints = distortPath([
       { x: 0, y: ridgeY },
       { x: W * 0.15, y: ridgeY - H * 0.06 },
       { x: W * 0.3, y: ridgeY - H * 0.12 },
@@ -18,10 +23,10 @@ export const starrySky: Scene = {
       { x: W * 0.7, y: ridgeY - H * 0.14 },
       { x: W * 0.85, y: ridgeY - H * 0.05 },
       { x: W, y: ridgeY },
-    ]
+    ], coherence, rng)
 
     // Generate stars
-    const starCount = 60
+    const starCount = Math.floor(40 + coherence * 20)
     const stars: Array<{ x: number; y: number; r: number; op: number }> = []
     for (let i = 0; i < starCount; i++) {
       stars.push({
@@ -32,12 +37,15 @@ export const starrySky: Scene = {
       })
     }
 
+    const texOpacity = ((1.0 - coherence) * 0.2).toFixed(2)
+
     const starElements = stars.map(s =>
       `<circle cx="${s.x.toFixed(1)}" cy="${s.y.toFixed(1)}" r="${s.r.toFixed(1)}" fill="${palette[3]}" opacity="${s.op.toFixed(2)}" />`
     ).join('\n        ')
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
       <defs>
+        ${filter}
         <linearGradient id="sky-${seed}" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="${palette[0]}" />
           <stop offset="60%" stop-color="${palette[1]}" />
@@ -57,8 +65,12 @@ export const starrySky: Scene = {
         ${starElements}
       </g>
 
+      <!-- Layer 3: Texture overlay -->
+      <rect width="${W}" height="${H}" filter="url(#${filterId})"
+            fill="${palette[1]}" opacity="${texOpacity}" />
+
       <!-- Layer 4: Ridge silhouette accent -->
-      <g>
+      <g filter="url(#${filterId})">
         <path d="${ridgePointsToPath(ridgePoints, W, H)}"
               fill="url(#ridge-${seed})" opacity="0.95" />
       </g>

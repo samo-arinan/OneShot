@@ -12,7 +12,7 @@ export type MatchLevel = 'perfect' | 'close' | 'different' | 'opposite'
 
 export interface VisualParams {
   seed: number
-  coherence?: number
+  coherence: number
   sceneId: string
   svgContent?: string
   theme?: string
@@ -29,6 +29,7 @@ export interface SceneRenderParams {
   width: number
   height: number
   seed: number
+  coherence: number
   rng: () => number
 }
 
@@ -66,7 +67,7 @@ export type ArtMode = 'ai-script'
 
 export interface GenerateRoundRequest {
   mode: 'script' | 'json'
-  coherence?: number
+  coherence: number
   previousThemes?: string[]
   lang?: 'en' | 'ja'
 }

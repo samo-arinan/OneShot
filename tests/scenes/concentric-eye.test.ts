@@ -7,13 +7,13 @@ runSceneContractTests(concentricEye)
 
 describe('concentric-eye specifics', () => {
   it('contains concentric circles', () => {
-    const svg = concentricEye.render({ width: 600, height: 400, seed: 42, rng: seededRandom(42) })
+    const svg = concentricEye.render({ width: 600, height: 400, seed: 42, coherence: 0.9, rng: seededRandom(42) })
     const circleCount = (svg.match(/<circle/g) || []).length
     expect(circleCount).toBeGreaterThanOrEqual(3)
   })
 
   it('has radial gradient for background', () => {
-    const svg = concentricEye.render({ width: 600, height: 400, seed: 42, rng: seededRandom(42) })
+    const svg = concentricEye.render({ width: 600, height: 400, seed: 42, coherence: 0.9, rng: seededRandom(42) })
     expect(svg).toContain('radialGradient')
   })
 })

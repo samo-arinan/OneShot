@@ -1,19 +1,25 @@
 import type { Scene, SceneRenderParams } from '../../types'
+import { jitter, buildDistortionFilter, distortPalette } from '../../lib/coherence-utils'
 
 export const frozenLake: Scene = {
   id: 'frozen-lake',
   name: '凍った湖',
   category: 'water',
 
-  render({ width: W, height: H, seed, rng }: SceneRenderParams): string {
-    const palette = ['#b8d4e8', '#d8ecf8', '#e8f4ff', '#f4faff', '#ffffff']
+  render({ width: W, height: H, seed, coherence, rng }: SceneRenderParams): string {
+    const palette = distortPalette(
+      ['#b8d4e8', '#d8ecf8', '#e8f4ff', '#f4faff', '#ffffff'],
+      coherence, rng
+    )
+    const filterId = `distort-${seed}`
+    const filter = buildDistortionFilter(coherence, filterId, seed)
 
     // Layer 1: Sky above, flat ice surface below
-    const iceY = H * 0.45
+    const iceY = jitter(H * 0.45, coherence, rng, H * 0.08)
 
     // Layer 2: Ice surface with horizontal banding
     const iceLines: string[] = []
-    const bandCount = Math.floor(8)
+    const bandCount = Math.floor(jitter(8, coherence, rng, 3))
     for (let i = 0; i < bandCount; i++) {
       const by = iceY + (H - iceY) * (i / bandCount)
       const opacity = (0.08 + i * 0.02).toFixed(2)
@@ -22,7 +28,7 @@ export const frozenLake: Scene = {
 
     // Layer 3: Crack patterns on ice
     const crackPaths: string[] = []
-    const crackCount = Math.floor(5)
+    const crackCount = Math.floor(jitter(5, coherence, rng, 4))
     for (let i = 0; i < crackCount; i++) {
       const startX = rng() * W
       const startY = iceY + rng() * (H - iceY)
@@ -32,20 +38,23 @@ export const frozenLake: Scene = {
       let cy = startY
       for (let s = 0; s < segments; s++) {
         const angle = rng() * Math.PI * 2
-        const len = 30
+        const len = jitter(30, coherence, rng, 20)
         cx += Math.cos(angle) * len
         cy += Math.sin(angle) * len * 0.4
         d += ` L ${cx.toFixed(1)} ${cy.toFixed(1)}`
       }
-      const crackOpacity = (0.4 + 0.1).toFixed(2)
+      const crackOpacity = ((1.0 - coherence) * 0.4 + 0.1).toFixed(2)
       crackPaths.push(`<path d="${d}" stroke="${palette[0]}" stroke-width="0.8" fill="none" opacity="${crackOpacity}" />`)
     }
 
+    const texOpacity = ((1.0 - coherence) * 0.15).toFixed(2)
+
     // Layer 4: Reflective sheen on ice
-    const sheenOpacity = (0.25).toFixed(2)
+    const sheenOpacity = (coherence * 0.25).toFixed(2)
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
         <defs>
+          ${filter}
           <linearGradient id="sky-${seed}" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="${palette[0]}" />
             <stop offset="100%" stop-color="${palette[2]}" />
@@ -70,7 +79,11 @@ export const frozenLake: Scene = {
         ${iceLines.join('\n        ')}
 
         <!-- Layer 3: Cracks -->
-        ${crackPaths.join('\n          ')}
+        <g filter="url(#${filterId})">
+          ${crackPaths.join('\n          ')}
+        </g>
+        <rect width="${W}" height="${H}" filter="url(#${filterId})"
+              fill="${palette[2]}" opacity="${texOpacity}" />
 
         <!-- Layer 4: Reflective sheen -->
         <rect y="${iceY.toFixed(1)}" width="${W}" height="${(H - iceY).toFixed(1)}"

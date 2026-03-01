@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { extractSvgFromResponse, validateSvg, generateRound } from '../src/lib/svg-generator'
+import { extractSvgFromResponse, validateSvg, coherenceToPromptHint, generateRound } from '../src/lib/svg-generator'
 
 describe('extractSvgFromResponse', () => {
   it('extracts SVG from raw text', () => {
@@ -89,6 +89,29 @@ describe('validateSvg', () => {
   })
 })
 
+describe('coherenceToPromptHint', () => {
+  it('returns recognizable hint for high coherence', () => {
+    const hint = coherenceToPromptHint(0.9)
+    expect(hint.toLowerCase()).toContain('recogni')
+  })
+
+  it('returns abstract hint for low coherence', () => {
+    const hint = coherenceToPromptHint(0.1)
+    expect(hint.toLowerCase()).toContain('abstract')
+  })
+
+  it('returns different hints for different coherence levels', () => {
+    const hints = [0.9, 0.7, 0.5, 0.3, 0.1].map(coherenceToPromptHint)
+    const unique = new Set(hints)
+    expect(unique.size).toBe(5)
+  })
+
+  it('handles boundary values', () => {
+    expect(coherenceToPromptHint(1.0)).toBe(coherenceToPromptHint(0.9))
+    expect(coherenceToPromptHint(0.0)).toBe(coherenceToPromptHint(0.1))
+  })
+})
+
 describe('generateRound', () => {
   const originalFetch = globalThis.fetch
 
@@ -109,12 +132,14 @@ describe('generateRound', () => {
 
     await generateRound({
       mode: 'script',
+      coherence: 0.9,
     })
 
     const call = vi.mocked(globalThis.fetch).mock.calls[0]
     expect(call[0]).toBe('/api/generate-svg')
     const body = JSON.parse((call[1] as RequestInit).body as string)
     expect(body.mode).toBe('script')
+    expect(body.coherence).toBe(0.9)
   })
 
   it('returns single round response with theme', async () => {
@@ -126,6 +151,7 @@ describe('generateRound', () => {
 
     const result = await generateRound({
       mode: 'script',
+      coherence: 0.9,
     })
     expect(result.content).toBe('code1')
     expect(result.fallback).toBe(false)
@@ -141,6 +167,7 @@ describe('generateRound', () => {
 
     await generateRound({
       mode: 'script',
+      coherence: 0.7,
       previousThemes: ['ocean waves', 'forest'],
     })
 
@@ -159,6 +186,7 @@ describe('generateRound', () => {
 
     await generateRound({
       mode: 'json',
+      coherence: 0.5,
     })
 
     const call = vi.mocked(globalThis.fetch).mock.calls[0]
@@ -175,6 +203,8 @@ describe('generateRound', () => {
 
     await expect(generateRound({
       mode: 'script',
+      coherence: 0.5,
     })).rejects.toThrow('API error 500')
   })
 })
+

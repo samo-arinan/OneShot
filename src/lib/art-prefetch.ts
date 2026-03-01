@@ -1,7 +1,7 @@
 import type { ArtMode, VisualParams } from '../types'
 import { generateRound } from './svg-generator'
 import { executeSvgScript } from './script-svg-executor'
-import { generateParams, computeCoherence } from './scene-selector'
+import { computeCoherence, generateParams } from './scene-selector'
 import { SCENE_REGISTRY } from '../scenes/registry'
 
 const MAX_SVG_RETRIES = 2
@@ -55,12 +55,12 @@ export async function generateSvgWithRetry(
 }
 
 export function startPrefetch(
-  round: number,
+  roundNum: number,
   _artMode: ArtMode,
   previousThemes: string[],
 ): PrefetchedRound {
-  const params = generateParams(0, [], SCENE_REGISTRY)
-  const coherence = computeCoherence(round)
+  const coherence = computeCoherence(roundNum)
+  const params = generateParams(roundNum, [], SCENE_REGISTRY)
 
   const prefetched: PrefetchedRound = {
     params,
