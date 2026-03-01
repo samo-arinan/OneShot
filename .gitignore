@@ -26,3 +26,4 @@ dist-ssr
 *.sw?
 .vercel
 .partykit
+prompt-test/

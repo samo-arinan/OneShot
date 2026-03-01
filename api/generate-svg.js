@@ -34,8 +34,8 @@ export default async function handler(req, res) {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: 4096,
-        temperature: 0.9,
+        max_tokens: 8192,
+        temperature: 0.7,
         response_format: { type: 'json_object' },
       }),
     })
@@ -58,7 +58,7 @@ export default async function handler(req, res) {
 
 function scriptSystemPrompt(isJa) {
   if (isJa) {
-    return `あなたはJavaScriptコードでSVGアートを生成するアーティストです。
+    return `あなたはJavaScriptコードで詳細なSVGアートを生成するアーティストです。
 
 ## ルール
 - コードは\`new Function('width', 'height', code)\`で実行されます。
@@ -66,21 +66,33 @@ function scriptSystemPrompt(isJa) {
 - テンプレートリテラルを使って有効なSVG文字列をreturnしてください。
 - SVG要素にxmlns="http://www.w3.org/2000/svg"を含めてください。
 - viewBox="0 0 " + width + " " + height を使用してください。
-- グラデーション、パス、円、矩形などのSVGシェイプを使ってください。
 - テキスト要素や埋め込み画像は使わないでください。
 - <script>タグやイベントハンドラ属性は入れないでください。
-- 各コードは3000文字以内にしてください。
+- 各コードは3500文字以内にしてください。
 
-## クリエイティブ指示
-- テーマ・モチーフは自由に選んでください。創造的で驚きのある選択を。
-- 自然、建築、宇宙現象、海中生物、神話、天気など、あらゆる領域から選べます。
-- テーマは視覚的に描写可能で、多くの人が見たら連想できるものを選んでください。「孤独」のような純粋な感情概念より、「灯台」「深海魚」のような具象物を優先してください。
-- "theme"フィールドに短いテーマラベル（2〜5語）を含めてください。
+## 構図
+- 背景: グラデーションや単色
+- 主題: 6〜12個のSVG要素で構成。1つのpathではなく、体・ディテール・特徴に分解する
+- テクスチャ: 半透明の全面rect（opacity 0.03-0.10）（任意）
+- アクセント: グロー効果（radialGradient）（任意）
+
+## 詳細な描画方法
+- 主題を部品に分解する:
+  * 輪郭・本体（1-2個のpath）
+  * 内部ディテール（縞、窓、模様 — rect, circle, path）
+  * 小さな識別特徴（目、アンテナ、ドア、ヒレ — その物体を認識可能にする要素）
+- 座標はwidth/heightに対する相対値を使う（例: W*0.5, H*0.3）
+
+## テーマ選択
+- 具体的で名前を付けられるものを描く — 幾何学模様や抽象的な塊ではなく
+- 良い題材: 灯台、帆船、猫、火山、城、木、魚、風車、クラゲ、気球、五重塔、フクロウ、サボテン、ロケット、白鳥、傘、橋、タツノオトシゴ、提灯、ペンギン、キノコ、ギター、錨
+- 見た人が2秒以内に「あれは○○だ」と言えること
+- "theme"フィールドに短いテーマラベル（2〜5語）を含めてください
 
 ## 出力形式
 JSON: {"code": "...", "theme": "..."}`
   }
-  return `You are an SVG artist who writes JavaScript code to generate artwork.
+  return `You are an SVG artist who writes JavaScript code to generate detailed artwork.
 
 ## Rules
 - The code runs via \`new Function('width', 'height', code)\`.
@@ -88,15 +100,27 @@ JSON: {"code": "...", "theme": "..."}`
 - Use template literals to build a valid SVG string.
 - Include xmlns="http://www.w3.org/2000/svg" in the SVG element.
 - Use viewBox="0 0 " + width + " " + height.
-- Use gradients, paths, circles, rectangles, and other SVG shapes for visual richness.
 - No text elements or embedded images.
 - No <script> tags or event handler attributes.
-- Keep each code under 3000 characters.
+- Keep each code under 3500 characters.
 
-## Creative Direction
-- Choose your own artistic theme/subject freely. Be creative and surprising.
-- Draw from any domain: nature, architecture, cosmic phenomena, underwater life, mythology, weather, etc.
-- Choose themes that are visually depictable and that most people can associate with. Prefer concrete objects like "lighthouse" or "deep-sea fish" over pure emotional concepts like "loneliness".
+## Composition
+- Background: gradient or solid color
+- Main subject: 6-12 SVG elements forming a CONCRETE, RECOGNIZABLE subject. NOT a single path — break the subject into multiple parts (body, details, features).
+- Texture overlay: translucent full-canvas rect, opacity 0.03-0.10 (optional)
+- Accent: focal glow using radialGradient (optional)
+
+## How to Draw Detailed Subjects
+- Break the subject into parts:
+  * Outline/body shape (1-2 paths)
+  * Internal details (stripes, windows, patterns — rects, circles, paths)
+  * Small distinguishing features (eyes, antenna, door, fins — what makes it recognizable)
+- Use coordinates relative to width/height (e.g., W*0.5, H*0.3) for responsiveness.
+
+## Subject Selection
+- Draw a concrete, nameable thing — NOT geometric patterns or abstract blobs.
+- Good subjects: lighthouse, sailboat, cat, volcano, castle, tree, fish, windmill, jellyfish, hot air balloon, pagoda, owl, cactus, rocket, swan, umbrella, bridge, seahorse, lantern, penguin, mushroom, guitar, anchor.
+- The viewer should say "that's a [thing]" within 2 seconds.
 - Include a brief theme label (2-5 words) in the "theme" field.
 
 ## Output format
@@ -167,24 +191,30 @@ function buildUserPrompt(mode, coherence, previousThemes, isJa) {
       : `\n\nAvoid these themes (already used): ${previousThemes.join(', ')}`)
     : ''
 
-  return isJa
-    ? `1つの抽象アートワークを生成してください。${modeNote}\n\n${hint}${avoidLine}`
-    : `Generate 1 abstract artwork. ${modeNote}\n\n${hint}${avoidLine}`
+  const subject = coherence >= 0.6
+    ? (isJa
+      ? '具体的で認識可能な主題を細かく描写した1つのアートワークを生成してください。'
+      : 'Generate 1 artwork depicting a concrete, recognizable subject with fine detail.')
+    : (isJa
+      ? '1つの抽象アートワークを生成してください。'
+      : 'Generate 1 abstract artwork.')
+
+  return `${subject} ${modeNote}\n\n${hint}${avoidLine}`
 }
 
 function getCoherenceHint(coherence, isJa) {
   if (isJa) {
-    if (coherence >= 0.8) return 'はっきりと認識できるシーン。明確な構図と調和の取れた配色。'
-    if (coherence >= 0.6) return 'やや抽象的でスタイライズされたシーン。主題は識別可能だが芸術的に歪んでいる。'
-    if (coherence >= 0.4) return '曖昧な抽象画。複数の解釈が可能。重なり合う形と控えめなコントラスト。'
-    if (coherence >= 0.2) return '高度に抽象的。形は断片的、色は不協和、フォルムはほぼ認識不能。'
-    return 'カオスな抽象。最大限の歪み、衝突する色彩、認識可能なフォルムなし。'
+    if (coherence >= 0.8) return '具体的で認識可能な主題を6〜12個のSVG要素で描く。見た人が2秒以内に一言で名前を言える（例:「灯台」「猫」「帆船」）。主題を本体＋ディテール＋特徴に分解する。単一pathではなく複数要素でリアルに。前景と背景の明確な分離。調和の取れた3〜5色パレット。'
+    if (coherence >= 0.6) return '認識可能だがスタイライズされた主題を5〜8個のSVG要素で描く。何が描かれているか推測できるが、形は芸術的に簡略化されている。主要なシルエットは識別可能に保つ。'
+    if (coherence >= 0.4) return '曖昧なアートワーク。複数の解釈が可能。形を重ね、レイヤー間の境界をぼかす。控えめなコントラスト。'
+    if (coherence >= 0.2) return '高度に抽象的な構図。主要な形を断片化。不協和な色彩。フォルムはほぼ認識不能。'
+    return 'カオスな抽象アート。最大限の歪み、衝突する色彩、認識可能なフォルムなし。'
   }
-  if (coherence >= 0.8) return 'Clearly recognizable scene. Distinct shapes, clear composition, harmonious colors.'
-  if (coherence >= 0.6) return 'Somewhat abstract and stylized. Subject identifiable but artistically distorted.'
-  if (coherence >= 0.4) return 'Ambiguous abstract. Multiple interpretations possible. Overlapping shapes, muted contrasts.'
-  if (coherence >= 0.2) return 'Highly abstract. Fragmented shapes, discordant colors, barely recognizable forms.'
-  return 'Chaotic abstract. Maximum distortion, clashing colors, no recognizable forms.'
+  if (coherence >= 0.8) return 'Draw a CONCRETE, RECOGNIZABLE subject using 6-12 SVG elements. The viewer should name it in one word within 2 seconds (e.g., "lighthouse", "cat", "sailboat"). Break the subject into body + details + features. Do NOT use a single path — use multiple elements for realism. Clear foreground/background separation. Harmonious 3-5 color palette.'
+  if (coherence >= 0.6) return 'Draw a recognizable but stylized subject using 5-8 SVG elements. The viewer should be able to guess what it is, though shapes are artistically simplified. Keep the main silhouette identifiable.'
+  if (coherence >= 0.4) return 'Create an ambiguous artwork. Multiple interpretations should be possible. Overlap shapes, blur boundaries between layers. Muted contrasts.'
+  if (coherence >= 0.2) return 'Create a highly abstract composition. Fragment the main shapes. Use discordant colors. Forms should be barely recognizable.'
+  return 'Create chaotic abstract art. Maximum distortion, clashing colors, no recognizable forms.'
 }
 
 function parseResponse(mode, parsed) {

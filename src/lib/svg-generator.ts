@@ -49,16 +49,16 @@ export function validateSvg(raw: string): string | null {
  */
 export function coherenceToPromptHint(coherence: number): string {
   if (coherence >= 0.8) {
-    return 'Create a clearly recognizable scene with distinct shapes, clear composition, and a harmonious 3-4 color palette.'
+    return 'Draw a CONCRETE, RECOGNIZABLE subject using 6-12 SVG elements. The viewer should name it in one word within 2 seconds (e.g., "lighthouse", "cat", "sailboat"). Break the subject into body + details + features. Do NOT use a single path — use multiple elements for realism. Clear foreground/background separation. Harmonious 3-5 color palette.'
   }
   if (coherence >= 0.6) {
-    return 'Create a somewhat abstract, stylized scene. The subject should be identifiable but artistically distorted with moderate abstraction.'
+    return 'Draw a recognizable but stylized subject using 5-8 SVG elements. The viewer should be able to guess what it is, though shapes are artistically simplified. Keep the main silhouette identifiable.'
   }
   if (coherence >= 0.4) {
-    return 'Create an ambiguous abstract artwork. The composition should allow multiple interpretations. Use overlapping shapes and muted contrasts.'
+    return 'Create an ambiguous artwork. Multiple interpretations should be possible. Overlap shapes, blur boundaries between layers. Muted contrasts.'
   }
   if (coherence >= 0.2) {
-    return 'Create a highly abstract composition. Shapes should be fragmented, colors discordant, forms barely recognizable.'
+    return 'Create a highly abstract composition. Fragment the main shapes. Use discordant colors. Forms should be barely recognizable.'
   }
-  return 'Create a chaotic abstract artwork. Maximum distortion, clashing colors, no recognizable forms. Pure visual noise.'
+  return 'Create chaotic abstract art. Maximum distortion, clashing colors, no recognizable forms.'
 }
