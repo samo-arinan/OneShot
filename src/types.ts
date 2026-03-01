@@ -12,6 +12,7 @@ export type MatchLevel = 'perfect' | 'close' | 'different' | 'opposite'
 
 export interface VisualParams {
   seed: number
+  coherence?: number
   sceneId: string
   svgContent?: string
   theme?: string
@@ -65,6 +66,7 @@ export type ArtMode = 'ai-script'
 
 export interface GenerateRoundRequest {
   mode: 'script' | 'json'
+  coherence?: number
   previousThemes?: string[]
   lang?: 'en' | 'ja'
 }

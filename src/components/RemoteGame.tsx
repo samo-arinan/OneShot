@@ -6,7 +6,7 @@ import { RemoteGameScreen } from './RemoteGameScreen'
 import { RoundResultScreen } from './RoundResultScreen'
 import { ResultsScreen } from './ResultsScreen'
 import { judgeGuesses } from '../lib/api'
-import { generateParams } from '../lib/scene-selector'
+import { generateParams, computeCoherence } from '../lib/scene-selector'
 import { SCENE_REGISTRY } from '../scenes/registry'
 import { buildShareText, shareToTwitter } from '../lib/share'
 import { seededRandom } from '../lib/seeded-random'
@@ -286,7 +286,7 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     send({ type: 'start_round', round: 1, params: fallbackParams })
 
     // Generate AI art in background, then update both players
-    const art = await generateSvgWithRetry([])
+    const art = await generateSvgWithRetry(computeCoherence(1), [])
     if (art.svgContent) {
       if (art.theme) previousThemesRef.current.push(art.theme)
       send({ type: 'update_round_art', svgContent: art.svgContent, theme: art.theme })
@@ -295,7 +295,7 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     }
 
     // Start prefetching round 2
-    prefetchRef.current = startPrefetch('ai-script', previousThemesRef.current)
+    prefetchRef.current = startPrefetch(2, 'ai-script', previousThemesRef.current)
   }, [send, sendFallbackArt])
 
   const handleSubmitGuess = useCallback((guess: string) => {
@@ -340,7 +340,7 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
       const fallbackParams = generateParams(nextRoundNum, previousSceneIds, SCENE_REGISTRY)
       send({ type: 'start_round', round: nextRoundNum, params: fallbackParams })
 
-      const art = await generateSvgWithRetry(previousThemesRef.current)
+      const art = await generateSvgWithRetry(computeCoherence(nextRoundNum), previousThemesRef.current)
       if (art.svgContent) {
         if (art.theme) previousThemesRef.current.push(art.theme)
         send({ type: 'update_round_art', svgContent: art.svgContent, theme: art.theme })
@@ -350,7 +350,7 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     }
 
     // Start prefetching next round
-    prefetchRef.current = startPrefetch('ai-script', previousThemesRef.current)
+    prefetchRef.current = startPrefetch(nextRoundNum + 1, 'ai-script', previousThemesRef.current)
   }, [role, send, sendFallbackArt])
 
   const handleViewResults = useCallback(() => {

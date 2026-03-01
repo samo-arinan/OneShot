@@ -42,3 +42,23 @@ export function validateSvg(raw: string): string | null {
   if (/javascript\s*:/i.test(raw)) return null
   return raw
 }
+
+/**
+ * Map a coherence value (0.0-1.0) to a prompt hint string
+ * describing how concrete or abstract the art should be.
+ */
+export function coherenceToPromptHint(coherence: number): string {
+  if (coherence >= 0.8) {
+    return 'Draw a clearly recognizable, concrete subject (e.g., lighthouse, cat, sailboat). The viewer should name it in one word within 2 seconds.'
+  }
+  if (coherence >= 0.65) {
+    return 'Draw a recognizable but slightly stylized subject. It should still be nameable but allow some artistic interpretation (e.g., a stormy sea, a twilight garden, a misty mountain).'
+  }
+  if (coherence >= 0.45) {
+    return 'Draw a scene that is open to interpretation. The subject should be suggestive rather than obvious — viewers may see different things (e.g., flowing energy, mysterious glow, organic forms merging).'
+  }
+  if (coherence >= 0.2) {
+    return 'Draw an abstract composition with only subtle hints of a real-world subject. Use shapes, colors, and textures that vaguely evoke something without being identifiable.'
+  }
+  return 'Draw a purely abstract visual — geometric forms, color fields, or chaotic textures. No recognizable subject needed.'
+}
