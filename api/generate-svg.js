@@ -34,7 +34,7 @@ export default async function handler(req, res) {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: 2048,
+        max_tokens: 4096,
         temperature: 0.9,
         response_format: { type: 'json_object' },
       }),
@@ -69,11 +69,12 @@ function scriptSystemPrompt(isJa) {
 - グラデーション、パス、円、矩形などのSVGシェイプを使ってください。
 - テキスト要素や埋め込み画像は使わないでください。
 - <script>タグやイベントハンドラ属性は入れないでください。
-- 各コードは1500文字以内にしてください。
+- 各コードは3000文字以内にしてください。
 
 ## クリエイティブ指示
 - テーマ・モチーフは自由に選んでください。創造的で驚きのある選択を。
-- 自然、建築、感情、宇宙現象、海中生物、神話、天気、抽象概念など、あらゆる領域から選べます。
+- 自然、建築、宇宙現象、海中生物、神話、天気など、あらゆる領域から選べます。
+- テーマは視覚的に描写可能で、多くの人が見たら連想できるものを選んでください。「孤独」のような純粋な感情概念より、「灯台」「深海魚」のような具象物を優先してください。
 - "theme"フィールドに短いテーマラベル（2〜5語）を含めてください。
 
 ## 出力形式
@@ -90,11 +91,12 @@ JSON: {"code": "...", "theme": "..."}`
 - Use gradients, paths, circles, rectangles, and other SVG shapes for visual richness.
 - No text elements or embedded images.
 - No <script> tags or event handler attributes.
-- Keep each code under 1500 characters.
+- Keep each code under 3000 characters.
 
 ## Creative Direction
 - Choose your own artistic theme/subject freely. Be creative and surprising.
-- Draw from any domain: nature, architecture, emotions, cosmic phenomena, underwater life, mythology, weather, abstract concepts, etc.
+- Draw from any domain: nature, architecture, cosmic phenomena, underwater life, mythology, weather, etc.
+- Choose themes that are visually depictable and that most people can associate with. Prefer concrete objects like "lighthouse" or "deep-sea fish" over pure emotional concepts like "loneliness".
 - Include a brief theme label (2-5 words) in the "theme" field.
 
 ## Output format
@@ -120,7 +122,8 @@ function jsonSystemPrompt(isJa) {
 
 ## クリエイティブ指示
 - テーマ・モチーフは自由に選んでください。創造的で驚きのある選択を。
-- 自然、建築、感情、宇宙現象、海中生物、神話、天気、抽象概念など、あらゆる領域から選べます。
+- 自然、建築、宇宙現象、海中生物、神話、天気など、あらゆる領域から選べます。
+- テーマは視覚的に描写可能で、多くの人が見たら連想できるものを選んでください。「孤独」のような純粋な感情概念より、「灯台」「深海魚」のような具象物を優先してください。
 - "theme"フィールドに短いテーマラベル（2〜5語）を含めてください。
 
 ## 出力形式
@@ -142,7 +145,8 @@ Each scene is a JSON object with:
 
 ## Creative Direction
 - Choose your own artistic theme/subject freely. Be creative and surprising.
-- Draw from any domain: nature, architecture, emotions, cosmic phenomena, underwater life, mythology, weather, abstract concepts, etc.
+- Draw from any domain: nature, architecture, cosmic phenomena, underwater life, mythology, weather, etc.
+- Choose themes that are visually depictable and that most people can associate with. Prefer concrete objects like "lighthouse" or "deep-sea fish" over pure emotional concepts like "loneliness".
 - Include a brief theme label (2-5 words) in the "theme" field.
 
 ## Output format
