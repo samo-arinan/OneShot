@@ -4,6 +4,13 @@ import { executeSvgScript } from './script-svg-executor'
 import { computeCoherence, generateParams } from './scene-selector'
 import { SCENE_REGISTRY } from '../scenes/registry'
 
+const MAX_SVG_RETRIES = 2
+
+export interface GeneratedArt {
+  svgContent: string | null
+  theme: string | undefined
+}
+
 export interface PrefetchedRound {
   params: VisualParams
   svgContent: string | null
@@ -18,6 +25,33 @@ export function convertRoundToSvg(
 ): string | null {
   if (fallback || !content) return null
   return executeSvgScript(content, 360, 360)
+}
+
+/**
+ * Generate SVG with retry logic.
+ * On failure (invalid SVG or API error), retries up to MAX_SVG_RETRIES additional times.
+ * Returns { svgContent, theme } — svgContent is null only after all attempts exhausted.
+ */
+export async function generateSvgWithRetry(
+  coherence: number,
+  previousThemes: string[],
+): Promise<GeneratedArt> {
+  for (let attempt = 0; attempt <= MAX_SVG_RETRIES; attempt++) {
+    try {
+      const response = await generateRound({
+        mode: 'script',
+        coherence,
+        previousThemes,
+      })
+      const svg = convertRoundToSvg(response.content, response.fallback, 'script')
+      if (svg) {
+        return { svgContent: svg, theme: response.theme }
+      }
+    } catch {
+      // API error — continue to next attempt
+    }
+  }
+  return { svgContent: null, theme: undefined }
 }
 
 export function startPrefetch(
@@ -36,20 +70,10 @@ export function startPrefetch(
   }
 
   const doFetch = async () => {
-    try {
-      const response = await generateRound({
-        mode: 'script',
-        coherence,
-        previousThemes,
-      })
-      prefetched.theme = response.theme
-      const svg = convertRoundToSvg(response.content, response.fallback, 'script')
-      prefetched.svgContent = svg
-    } catch {
-      // Leave svgContent null — caller falls back to classic scene
-    } finally {
-      prefetched.promise = null
-    }
+    const result = await generateSvgWithRetry(coherence, previousThemes)
+    prefetched.svgContent = result.svgContent
+    prefetched.theme = result.theme
+    prefetched.promise = null
   }
 
   prefetched.promise = doFetch()

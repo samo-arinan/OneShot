@@ -6,13 +6,12 @@ import { RemoteGameScreen } from './RemoteGameScreen'
 import { RoundResultScreen } from './RoundResultScreen'
 import { ResultsScreen } from './ResultsScreen'
 import { judgeGuesses } from '../lib/api'
-import { generateRound } from '../lib/svg-generator'
 import { generateParams } from '../lib/scene-selector'
 import { SCENE_REGISTRY } from '../scenes/registry'
 import { buildShareText, shareToTwitter } from '../lib/share'
 import { seededRandom } from '../lib/seeded-random'
 import { t } from '../lib/i18n'
-import { convertRoundToSvg, startPrefetch } from '../lib/art-prefetch'
+import { generateSvgWithRetry, startPrefetch } from '../lib/art-prefetch'
 import type { PrefetchedRound } from '../lib/art-prefetch'
 import type { ServerMessage } from '../../party/protocol'
 import type { ClientMessage } from '../../party/protocol'
@@ -287,23 +286,11 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
     send({ type: 'start_round', round: 1, params: fallbackParams })
 
     // Generate AI art in background, then update both players
-    let artSent = false
-    try {
-      const response = await generateRound({
-        mode: 'script',
-        coherence: fallbackParams.coherence,
-        previousThemes: [],
-      })
-      const svg = convertRoundToSvg(response.content, response.fallback, 'script')
-      if (svg) {
-        if (response.theme) previousThemesRef.current.push(response.theme)
-        send({ type: 'update_round_art', svgContent: svg, theme: response.theme })
-        artSent = true
-      }
-    } catch {
-      // Fall through to fallback below
-    }
-    if (!artSent) {
+    const art = await generateSvgWithRetry(fallbackParams.coherence, [])
+    if (art.svgContent) {
+      if (art.theme) previousThemesRef.current.push(art.theme)
+      send({ type: 'update_round_art', svgContent: art.svgContent, theme: art.theme })
+    } else {
       sendFallbackArt(fallbackParams)
     }
 
@@ -353,23 +340,11 @@ export function RemoteGame({ roomCode, role, onLeave }: RemoteGameProps) {
       const fallbackParams = generateParams(nextRoundNum, previousSceneIds, SCENE_REGISTRY)
       send({ type: 'start_round', round: nextRoundNum, params: fallbackParams })
 
-      let artSent = false
-      try {
-        const response = await generateRound({
-          mode: 'script',
-          coherence: fallbackParams.coherence,
-          previousThemes: previousThemesRef.current,
-        })
-        const svg = convertRoundToSvg(response.content, response.fallback, 'script')
-        if (svg) {
-          if (response.theme) previousThemesRef.current.push(response.theme)
-          send({ type: 'update_round_art', svgContent: svg, theme: response.theme })
-          artSent = true
-        }
-      } catch {
-        // Fall through to fallback below
-      }
-      if (!artSent) {
+      const art = await generateSvgWithRetry(fallbackParams.coherence, previousThemesRef.current)
+      if (art.svgContent) {
+        if (art.theme) previousThemesRef.current.push(art.theme)
+        send({ type: 'update_round_art', svgContent: art.svgContent, theme: art.theme })
+      } else {
         sendFallbackArt(fallbackParams)
       }
     }

@@ -4,12 +4,11 @@ import { GameScreen } from './GameScreen'
 import { RoundResultScreen } from './RoundResultScreen'
 import { ResultsScreen } from './ResultsScreen'
 import { judgeGuesses } from '../lib/api'
-import { generateRound } from '../lib/svg-generator'
 import { generateParams } from '../lib/scene-selector'
 import { SCENE_REGISTRY } from '../scenes/registry'
 import { buildShareText, shareToTwitter } from '../lib/share'
 import { t } from '../lib/i18n'
-import { convertRoundToSvg, startPrefetch } from '../lib/art-prefetch'
+import { generateSvgWithRetry, startPrefetch } from '../lib/art-prefetch'
 import type { PrefetchedRound } from '../lib/art-prefetch'
 import type { GameState, RoundRecord, VisualParams } from '../types'
 
@@ -83,26 +82,15 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
     } else {
       // Fallback: generate on demand if prefetch was somehow missing
       setIsGeneratingArt(true)
-      try {
-        const response = await generateRound({
-          mode: 'script',
-          coherence: fallbackParams.coherence,
-          previousThemes: [],
-        })
-        const svg = convertRoundToSvg(response.content, response.fallback, 'script')
-        if (svg) {
-          const theme = response.theme
-          if (theme) previousThemesRef.current.push(theme)
-          setState((prev) => ({
-            ...prev,
-            currentParams: { ...prev.currentParams, svgContent: svg, theme },
-          }))
-        }
-      } catch {
-        // Fallback to classic scene silently
-      } finally {
-        setIsGeneratingArt(false)
+      const art = await generateSvgWithRetry(fallbackParams.coherence, [])
+      if (art.svgContent) {
+        if (art.theme) previousThemesRef.current.push(art.theme)
+        setState((prev) => ({
+          ...prev,
+          currentParams: { ...prev.currentParams, svgContent: art.svgContent!, theme: art.theme },
+        }))
       }
+      setIsGeneratingArt(false)
     }
 
     // Start prefetching round 2
@@ -228,26 +216,15 @@ export function LocalGame({ roomCodeFromUrl, onCreateRoom, onJoinRoom }: LocalGa
         currentParams: fallbackParams,
       }))
       setIsGeneratingArt(true)
-
-      try {
-        const response = await generateRound({
-          mode: 'script',
-          coherence: fallbackParams.coherence,
-          previousThemes: previousThemesRef.current,
-        })
-        const svg = convertRoundToSvg(response.content, response.fallback, 'script')
-        if (svg) {
-          if (response.theme) previousThemesRef.current.push(response.theme)
-          setState((s) => ({
-            ...s,
-            currentParams: { ...s.currentParams, svgContent: svg, theme: response.theme },
-          }))
-        }
-      } catch {
-        // Fallback to classic scene silently
-      } finally {
-        setIsGeneratingArt(false)
+      const art = await generateSvgWithRetry(fallbackParams.coherence, previousThemesRef.current)
+      if (art.svgContent) {
+        if (art.theme) previousThemesRef.current.push(art.theme)
+        setState((s) => ({
+          ...s,
+          currentParams: { ...s.currentParams, svgContent: art.svgContent!, theme: art.theme },
+        }))
       }
+      setIsGeneratingArt(false)
     }
 
     // Start prefetching next round
